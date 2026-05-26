@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scopus Checker + القوائم السوداء (العراقية + بيل)</title>
+    <title>Scopus Checker + القوائم السوداء</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -244,6 +244,14 @@
             margin-right: 10px;
         }
         hr { margin: 15px 0; }
+        .status-debug {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -264,26 +272,25 @@
                     <label>📁 روابط ملفات JSON على GitHub (القوائم السوداء):</label>
                     <input type="text" id="iraqiListUrl" placeholder="رابط القائمة السوداء العراقية" dir="ltr" value="https://raw.githubusercontent.com/zizoiraq/New-Scopus-Finder/main/blacklist.json">
                     <input type="text" id="beallListUrl" placeholder="رابط قائمة بيل" dir="ltr" value="https://raw.githubusercontent.com/zizoiraq/New-Scopus-Finder/main/beall_list.json" style="margin-top: 8px;">
-                    <small>✅ الروابط مفعلة مسبقاً حسب ملفاتك على GitHub (استخدم روابط RAW)</small>
+                    <small>✅ الروابط مفعلة مسبقاً حسب ملفاتك على GitHub</small>
                 </div>
                 
                 <div class="input-group">
-                    <input type="text" id="searchInput" placeholder="أدخل ISSN أو عنوان المجلة (مثال: 0002-9890 أو Oncotarget)" dir="ltr">
+                    <input type="text" id="searchInput" placeholder="أدخل ISSN أو عنوان المجلة" dir="ltr">
                     <button onclick="searchJournal()">🔍 بحث وتحقق</button>
                 </div>
                 <div class="example">
                     📝 أمثلة: 
                     <span onclick="setExample('0002-9890')">0002-9890 (American Mathematical Monthly)</span> • 
-                    <span onclick="setExample('2166-0727')">2166-0727 (CISTI)</span> • 
-                    <span onclick="setExample('Oncotarget')">Oncotarget (في قائمة بيل)</span> • 
-                    <span onclick="setExample('Pakistan Heart Journal')">Pakistan Heart Journal (القائمة العراقية)</span>
+                    <span onclick="setExample('Oncotarget')">Oncotarget</span> • 
+                    <span onclick="setExample('Pakistan Heart Journal')">Pakistan Heart Journal</span>
                 </div>
             </div>
             
             <div id="result" class="result"></div>
         </div>
         <div class="footer">
-            <p>جميع البيانات مقدمة من Scopus API © Elsevier | يتم التحقق من القوائم السوداء تلقائياً من GitHub</p>
+            <p>جميع البيانات مقدمة من Scopus API © Elsevier | يتم التحقق من القوائم السوداء تلقائياً (مقارنة غير حساسة لحالة الأحرف)</p>
         </div>
     </div>
 
@@ -291,74 +298,137 @@
         const STORAGE_KEY = 'scopus_api_key';
         let blacklists = { iraqi: [], beall: [] };
         let blacklistsLoaded = false;
+        let debugInfo = [];
+        
+        function addDebug(msg) {
+            debugInfo.push(msg);
+            console.log(msg);
+        }
         
         // تحميل القوائم السوداء من GitHub
         async function loadBlacklists() {
             const iraqiUrl = document.getElementById('iraqiListUrl').value;
             const beallUrl = document.getElementById('beallListUrl').value;
             
-            console.log('جاري تحميل القائمة العراقية من:', iraqiUrl);
-            console.log('جاري تحميل قائمة بيل من:', beallUrl);
+            addDebug('🔄 جاري تحميل القائمة العراقية من: ' + iraqiUrl);
+            addDebug('🔄 جاري تحميل قائمة بيل من: ' + beallUrl);
             
             try {
                 const [iraqiRes, beallRes] = await Promise.all([
-                    fetch(iraqiUrl).catch(() => ({ ok: false })),
-                    fetch(beallUrl).catch(() => ({ ok: false }))
+                    fetch(iraqiUrl).catch(e => ({ ok: false, error: e })),
+                    fetch(beallUrl).catch(e => ({ ok: false, error: e }))
                 ]);
                 
                 if (iraqiRes.ok) {
                     blacklists.iraqi = await iraqiRes.json();
-                    console.log('✅ تم تحميل القائمة السوداء العراقية:', blacklists.iraqi.length, 'مجلة');
+                    addDebug('✅ تم تحميل القائمة السوداء العراقية: ' + blacklists.iraqi.length + ' مجلة');
+                    if (blacklists.iraqi.length > 0) {
+                        addDebug('📋 أول 5 أسماء في القائمة العراقية: ' + blacklists.iraqi.slice(0,5).join(', '));
+                    }
                 } else {
-                    console.warn('⚠️ فشل تحميل القائمة العراقية - حالة:', iraqiRes.status);
+                    addDebug('⚠️ فشل تحميل القائمة العراقية - حالة: ' + iraqiRes.status);
                     blacklists.iraqi = [];
                 }
                 
                 if (beallRes.ok) {
                     blacklists.beall = await beallRes.json();
-                    console.log('✅ تم تحميل قائمة بيل:', blacklists.beall.length, 'مجلة');
+                    addDebug('✅ تم تحميل قائمة بيل: ' + blacklists.beall.length + ' مجلة');
+                    if (blacklists.beall.length > 0) {
+                        addDebug('📋 أول 5 أسماء في قائمة بيل: ' + blacklists.beall.slice(0,5).join(', '));
+                    }
                 } else {
-                    console.warn('⚠️ فشل تحميل قائمة بيل - حالة:', beallRes.status);
+                    addDebug('⚠️ فشل تحميل قائمة بيل - حالة: ' + beallRes.status);
                     blacklists.beall = [];
                 }
                 
                 blacklistsLoaded = true;
             } catch (error) {
-                console.error('خطأ في تحميل القوائم السوداء:', error);
+                addDebug('❌ خطأ في تحميل القوائم: ' + error.message);
                 blacklistsLoaded = true;
             }
         }
         
-        // التحقق من وجود المجلة في القوائم السوداء (بحث بالاسم)
+        // دالة لتطبيع النص للمقارنة (إزالة علامات الترقيم، توحيد الحروف)
+        function normalizeText(text) {
+            if (!text) return '';
+            return text.toLowerCase()
+                .trim()
+                .replace(/[^\u0621-\u064A\u0660-\u0669a-z0-9\s]/gi, '') // إزالة علامات الترقيم
+                .replace(/\s+/g, ' ') // توحيد المسافات
+                .trim();
+        }
+        
+        // التحقق من وجود المجلة في القوائم السوداء (مع دعم المطابقة الجزئية والمرنة)
         function checkBlacklist(title) {
             const warnings = [];
             
             if (!title) return warnings;
             
-            const normalizedTitle = title.toLowerCase().trim();
+            const normalizedTitle = normalizeText(title);
+            addDebug('🔍 جاري التحقق من: "' + title + '" (normalized: "' + normalizedTitle + '")');
             
             // التحقق في القائمة السوداء العراقية
             for (const journalName of blacklists.iraqi) {
-                if (journalName && journalName.toLowerCase().trim() === normalizedTitle) {
+                const normalizedJournal = normalizeText(journalName);
+                if (normalizedJournal === normalizedTitle) {
+                    addDebug('⚠️ تم العثور على تطابق تام في القائمة العراقية: "' + journalName + '"');
                     warnings.push({
                         source: '🇮🇶 القائمة السوداء - وزارة التعليم العالي العراقية',
                         reason: 'مجلة محظورة أو مفترسة حسب تصنيف وزارة التعليم العالي العراقية',
-                        type: 'blacklist'
+                        matchedName: journalName
                     });
                     break;
                 }
             }
             
-            // التحقق في قائمة بيل
+            // إذا لم يتم العثور على تطابق تام، نبحث عن تطابق جزئي
+            if (warnings.length === 0) {
+                for (const journalName of blacklists.iraqi) {
+                    const normalizedJournal = normalizeText(journalName);
+                    if (normalizedJournal.includes(normalizedTitle) || normalizedTitle.includes(normalizedJournal)) {
+                        addDebug('⚠️ تم العثور على تطابق جزئي في القائمة العراقية: "' + journalName + '"');
+                        warnings.push({
+                            source: '🇮🇶 القائمة السوداء - وزارة التعليم العالي العراقية',
+                            reason: 'مجلة محظورة أو مفترسة (تطابق جزئي)',
+                            matchedName: journalName
+                        });
+                        break;
+                    }
+                }
+            }
+            
+            // التحقق في قائمة بيل (تطابق تام)
             for (const journalName of blacklists.beall) {
-                if (journalName && journalName.toLowerCase().trim() === normalizedTitle) {
+                const normalizedJournal = normalizeText(journalName);
+                if (normalizedJournal === normalizedTitle) {
+                    addDebug('⚠️ تم العثور على تطابق تام في قائمة بيل: "' + journalName + '"');
                     warnings.push({
                         source: '📋 قائمة بيل (Beall\'s List) - المجلات المفترسة عالمياً',
                         reason: 'مجلة مفترسة (Predatory Journal) حسب تصنيف Jeffrey Beall',
-                        type: 'beall'
+                        matchedName: journalName
                     });
                     break;
                 }
+            }
+            
+            // تطابق جزئي في قائمة بيل
+            if (warnings.length === 0) {
+                for (const journalName of blacklists.beall) {
+                    const normalizedJournal = normalizeText(journalName);
+                    if (normalizedJournal.includes(normalizedTitle) || normalizedTitle.includes(normalizedJournal)) {
+                        addDebug('⚠️ تم العثور على تطابق جزئي في قائمة بيل: "' + journalName + '"');
+                        warnings.push({
+                            source: '📋 قائمة بيل (Beall\'s List) - المجلات المفترسة عالمياً',
+                            reason: 'مجلة مفترسة (تطابق جزئي)',
+                            matchedName: journalName
+                        });
+                        break;
+                    }
+                }
+            }
+            
+            if (warnings.length === 0) {
+                addDebug('✅ لم يتم العثور على المجلة في أي من القوائم السوداء');
             }
             
             return warnings;
@@ -369,6 +439,8 @@
             const query = document.getElementById('searchInput').value.trim();
             const apiKey = document.getElementById('apiKeyInput').value.trim();
             const resultDiv = document.getElementById('result');
+            
+            debugInfo = [];
             
             if (!apiKey) {
                 resultDiv.style.display = 'block';
@@ -389,7 +461,7 @@
             }
             
             resultDiv.style.display = 'block';
-            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>جاري البحث في Scopus والتحقق من القوائم السوداء...</p></div>';
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>جاري البحث في Scopus...</p></div>';
             
             try {
                 let url;
@@ -406,9 +478,9 @@
                 const response = await fetch(url);
                 
                 if (!response.ok) {
-                    if (response.status === 401) throw new Error('مفتاح API غير صالح. تأكد من إدخال المفتاح الصحيح من Elsevier Developer Portal');
-                    if (response.status === 429) throw new Error('تم تجاوز حد الطلبات المسموح بها. الرجاء المحاولة لاحقاً');
-                    throw new Error(`خطأ ${response.status}: ${response.statusText}`);
+                    if (response.status === 401) throw new Error('مفتاح API غير صالح');
+                    if (response.status === 429) throw new Error('تم تجاوز حد الطلبات المسموح بها');
+                    throw new Error(`خطأ ${response.status}`);
                 }
                 
                 const data = await response.json();
@@ -429,13 +501,21 @@
             const journals = Array.isArray(serials) ? serials : [serials];
             let html = '';
             
+            // عرض معلومات التصحيح
+            html += `<div class="status-debug">
+                        <details>
+                            <summary>📋 سجل التحقق من القوائم السوداء (اضغط للعرض)</summary>
+                            <pre style="margin-top: 10px; font-size: 11px; overflow-x: auto;">${debugInfo.map(d => '• ' + d).join('\n')}</pre>
+                        </details>
+                     </div>`;
+            
             for (let i = 0; i < journals.length; i++) {
                 const j = journals[i];
                 const title = j['dc:title'] || 'غير معروف';
                 const issn = j['prism:issn'] || '';
                 const publisher = j['dc:publisher'] || 'غير معروف';
                 
-                // التحقق من القوائم السوداء (باستخدام الاسم)
+                // التحقق من القوائم السوداء
                 const warnings = checkBlacklist(title);
                 
                 // عرض التنبيهات إذا وجدت
@@ -447,6 +527,7 @@
                                 <div style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 8px;">
                                     <strong>📌 ${w.source}</strong><br>
                                     السبب: ${w.reason}<br>
+                                    ${w.matchedName ? `الاسم في القائمة: ${w.matchedName}` : ''}
                                 </div>
                             `).join('')}
                             <div style="margin-top: 10px; font-weight: bold;">✋ يوصى بعدم النشر في هذه المجلة!</div>
@@ -461,7 +542,7 @@
                     `;
                 }
                 
-                // عرض معلومات Scopus
+                // بقية معلومات Scopus...
                 const sourceType = j['prism:aggregationType'] || 'غير محدد';
                 const sourceId = j['source-id'] || 'غير متوفر';
                 const coverageStart = j['coverageStartYear'] || j['coverage-start-year']?.['$'] || 'غير متوفر';
@@ -474,16 +555,12 @@
                 if (j['SJRList']?.['SJR']) {
                     const sjrItems = Array.isArray(j['SJRList']['SJR']) ? j['SJRList']['SJR'] : [j['SJRList']['SJR']];
                     sjrList = sjrItems.map(item => ({ year: item['@year'], value: item['$'] }));
-                } else if (j['SJR']) {
-                    sjrList = [{ year: j['SJR']['@year'] || '2024', value: j['SJR']['@sjr'] || j['SJR']['$'] }];
                 }
                 
                 let snipList = [];
                 if (j['SNIPList']?.['SNIP']) {
                     const snipItems = Array.isArray(j['SNIPList']['SNIP']) ? j['SNIPList']['SNIP'] : [j['SNIPList']['SNIP']];
                     snipList = snipItems.map(item => ({ year: item['@year'], value: item['$'] }));
-                } else if (j['SNIP']) {
-                    snipList = [{ year: j['SNIP']['@year'], value: j['SNIP']['$'] }];
                 }
                 
                 let subjects = [];
@@ -533,7 +610,7 @@
                 if (sjrList.length > 0) {
                     html += `
                         <div class="section">
-                            <div class="section-title">⭐ SJR (SCImago Journal Rank)</div>
+                            <div class="section-title">⭐ SJR</div>
                             <div class="metrics-grid">
                                 ${sjrList.map(sjr => `
                                     <div class="metric-card">
@@ -578,7 +655,7 @@
                     html += `
                         <div class="section">
                             <div class="section-title">🔗 رابط المصدر في Scopus</div>
-                            <a href="${scopusLink}" target="_blank" style="color: #667eea; word-break: break-all;">${scopusLink}</a>
+                            <a href="${scopusLink}" target="_blank" style="color: #667eea;">${scopusLink}</a>
                         </div>
                     `;
                 }
@@ -586,7 +663,7 @@
                 html += `
                     <details>
                         <summary style="cursor: pointer; color: #667eea; margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px;">
-                            📄 عرض جميع البيانات الخام من Scopus (JSON)
+                            📄 عرض جميع البيانات الخام
                         </summary>
                         <div class="raw-data">${JSON.stringify(j, null, 2)}</div>
                     </details>
@@ -613,22 +690,18 @@
             searchJournal();
         }
         
-        // دعم البحث بالضغط على Enter
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') searchJournal();
         });
         
-        // حفظ مفتاح API في localStorage
         document.getElementById('apiKeyInput').addEventListener('change', function() {
             if (this.value.trim()) localStorage.setItem(STORAGE_KEY, this.value.trim());
-            else localStorage.removeItem(STORAGE_KEY);
         });
         
-        // تحميل المفتاح المحفوظ عند بدء التشغيل
         document.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) document.getElementById('apiKeyInput').value = saved;
-            loadBlacklists(); // تحميل القوائم عند بدء التشغيل
+            loadBlacklists();
         });
     </script>
 </body>
