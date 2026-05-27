@@ -116,14 +116,6 @@
             border-radius: 10px;
             border-right: 4px solid #dc3545;
         }
-        .warning-message {
-            background: #fff3cd;
-            color: #856404;
-            padding: 15px;
-            border-radius: 10px;
-            border-right: 4px solid #ffc107;
-            margin-bottom: 20px;
-        }
         .danger-message {
             background: #f8d7da;
             color: #721c24;
@@ -237,13 +229,6 @@
             font-size: 12px;
             margin-right: 10px;
         }
-        .badge-danger {
-            background: #dc3545;
-        }
-        .badge-warning {
-            background: #ffc107;
-            color: #856404;
-        }
         .raw-data {
             background: #2d2d2d;
             color: #f8f8f2;
@@ -274,6 +259,15 @@
             margin-top: 10px;
         }
         hr { margin: 20px 0; }
+        .debug-info {
+            background: #f0f0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -290,20 +284,21 @@
                 </div>
                 
                 <div class="input-group">
-                    <input type="text" id="searchInput" placeholder="أدخل ISSN أو عنوان المجلة (مثال: 0002-9890 أو American Mathematical Monthly)" dir="ltr">
+                    <input type="text" id="searchInput" placeholder="أدخل ISSN أو عنوان المجلة" dir="ltr">
                     <button onclick="searchJournal()">🔍 فحص المجلة</button>
                 </div>
                 <div class="example">
                     📝 أمثلة: 
                     <span onclick="setExample('0002-9890')">0002-9890 (American Mathematical Monthly)</span> • 
-                    <span onclick="setExample('2166-0727')">2166-0727 (CISTI)</span> • 
-                    <span onclick="setExample('1937-3333')">1937-3333 (IEEE Reviews)</span> •
-                    <span onclick="setExample('Bulletin of National Institute of Health Sciences')">Bulletin of National Institute of Health Sciences</span>
+                    <span onclick="setExample('Bulletin of National Institute of Health Sciences')">🇮🇶 اختبار القائمة العراقية</span> •
+                    <span onclick="setExample('Oncotarget')">📋 اختبار قائمة بيل (Oncotarget)</span> •
+                    <span onclick="setExample('American Journal of Engineering Research')">📋 اختبار قائمة بيل (AJER)</span>
                 </div>
                 <div class="example" style="margin-top: 10px; color:#856404;">
                     ⚠️ سيتم التحقق من المجلة تلقائياً في القائمة السوداء العراقية وقائمة بيل
                 </div>
                 <div id="listsStatus" class="list-status">🔄 جاري تحميل القوائم...</div>
+                <div id="debugInfo" class="debug-info"></div>
             </div>
             
             <div id="result" class="result"></div>
@@ -317,57 +312,77 @@
         // ========== المتغيرات العامة ==========
         let beallList = [];
         let iraqBlacklist = [];
+        let beallNormalized = [];
+        let iraqNormalized = [];
 
-        // ========== دوال تطبيع النص المتقدمة ==========
+        // ========== دالة تطبيع النص المتقدمة (للمقارنة القوية) ==========
         function normalizeText(text) {
             if (!text) return '';
-            return text.toLowerCase()
-                .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FFa-zA-Z0-9\s]/g, '')
+            return text
+                .toLowerCase()
+                // إزالة جميع علامات الترقيم والرموز الخاصة
+                .replace(/[^\p{L}\p{N}\s]/gu, '')
+                // إزالة الأقواس والمحتويات داخلها (مثل (note: ...))
+                .replace(/\s*\([^)]*\)/g, '')
+                .replace(/\s*\[[^\]]*\]/g, '')
+                // توحيد المسافات
+                .replace(/\s+/g, ' ')
+                // إزالة الكلمات الشائعة جداً
+                .replace(/\b(the|and|of|in|to|for|on|with|by|a|an|journal|international|research|science|sciences|studies|review|letters|proceedings|annals|archives|advances|current|bulletin|national|institute|health)\b/gi, '')
+                .trim();
+        }
+
+        // دالة تطبيع خفيفة (للحفاظ على المعنى)
+        function normalizeLight(text) {
+            if (!text) return '';
+            return text
+                .toLowerCase()
+                .replace(/[^\w\s]/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
         }
 
-        // دالة المقارنة الذكية
+        // ========== دالة المقارنة الذكية المحسنة ==========
         function fuzzyMatch(journalTitle, blacklistEntry) {
             if (!journalTitle || !blacklistEntry) return false;
             
-            const normalizedTitle = normalizeText(journalTitle);
-            const normalizedBlack = normalizeText(blacklistEntry);
+            const lightTitle = normalizeLight(journalTitle);
+            const lightBlack = normalizeLight(blacklistEntry);
             
-            // 1. تطابق تام
-            if (normalizedTitle === normalizedBlack) return true;
+            // 1. تطابق تام بعد التنظيف الخفيف
+            if (lightTitle === lightBlack) return true;
             
-            // 2. العنوان يحتوي على النص من القائمة السوداء
-            if (normalizedTitle.includes(normalizedBlack)) return true;
+            // 2. تطابق بعد إزالة الكلمات الشائعة
+            const deepTitle = normalizeText(journalTitle);
+            const deepBlack = normalizeText(blacklistEntry);
             
-            // 3. النص من القائمة السوداء يحتوي على العنوان
-            if (normalizedBlack.includes(normalizedTitle)) return true;
+            if (deepTitle === deepBlack) return true;
             
-            // 4. إزالة الكلمات الشائعة ومقارنة الكلمات الرئيسية
-            const commonWords = ['the', 'of', 'and', 'in', 'to', 'for', 'a', 'an', 'journal', 'international', 
-                                 'bulletin', 'research', 'science', 'sciences', 'studies', 'university', 'review',
-                                 'letters', 'proceedings', 'annals', 'archives', 'advances', 'current'];
+            // 3. احتواء
+            if (lightTitle.includes(lightBlack) || lightBlack.includes(lightTitle)) return true;
+            if (deepTitle.includes(deepBlack) || deepBlack.includes(deepTitle)) return true;
             
-            let titleWords = normalizedTitle.split(' ').filter(w => !commonWords.includes(w) && w.length > 2);
-            let blackWords = normalizedBlack.split(' ').filter(w => !commonWords.includes(w) && w.length > 2);
+            // 4. تقسيم الكلمات ومقارنة نسبة التشابه
+            const titleWords = lightTitle.split(' ').filter(w => w.length > 3);
+            const blackWords = lightBlack.split(' ').filter(w => w.length > 3);
             
             if (titleWords.length === 0 || blackWords.length === 0) return false;
             
             let matchCount = 0;
             for (let tw of titleWords) {
                 for (let bw of blackWords) {
-                    if (bw === tw || bw.includes(tw) || tw.includes(bw)) {
+                    if (tw === bw || tw.includes(bw) || bw.includes(tw)) {
                         matchCount++;
                         break;
                     }
                 }
             }
             
-            let matchRatio = matchCount / Math.max(titleWords.length, blackWords.length);
-            return matchRatio > 0.6;  // 60% تطابق كافٍ للتحذير
+            const matchRatio = matchCount / Math.max(titleWords.length, blackWords.length);
+            return matchRatio >= 0.6; // 60% تشابه كافٍ
         }
 
-        // دالة التحقق من القوائم السوداء
+        // ========== دالة التحقق من القوائم ==========
         function checkBlacklists(journalTitle, journalIssn = '') {
             let results = {
                 inBeall: false,
@@ -380,51 +395,42 @@
 
             if (!journalTitle || journalTitle === 'غير معروف') return results;
 
-            console.log(`🔍 جاري فحص المجلة: "${journalTitle}"`);
+            console.log(`🔍 جاري فحص: "${journalTitle}"`);
             
-            // التحقق في القائمة السوداء العراقية
-            for (const blackJournal of iraqBlacklist) {
+            // التحقق من القائمة السوداء العراقية
+            for (let i = 0; i < iraqBlacklist.length; i++) {
+                const blackJournal = iraqBlacklist[i];
                 if (fuzzyMatch(journalTitle, blackJournal)) {
                     results.inIraqBlacklist = true;
                     results.iraqMatch = blackJournal;
-                    
-                    // حساب نسبة التطابق التقريبية
-                    const normTitle = normalizeText(journalTitle);
-                    const normBlack = normalizeText(blackJournal);
-                    if (normTitle === normBlack) results.iraqMatchPercent = 100;
-                    else if (normTitle.includes(normBlack) || normBlack.includes(normTitle)) results.iraqMatchPercent = 90;
-                    else results.iraqMatchPercent = 75;
-                    
-                    console.log(`⚠️ القائمة السوداء العراقية: "${blackJournal}" (تطابق ${results.iraqMatchPercent}%)`);
+                    results.iraqMatchPercent = 95;
+                    console.log(`⚠️ العراق: "${blackJournal}"`);
                     break;
                 }
             }
 
-            // التحقق في قائمة بيل
-            for (const beallJournal of beallList) {
+            // التحقق من قائمة بيل
+            for (let i = 0; i < beallList.length; i++) {
+                const beallJournal = beallList[i];
                 if (fuzzyMatch(journalTitle, beallJournal)) {
                     results.inBeall = true;
                     results.beallMatch = beallJournal;
-                    
-                    const normTitle = normalizeText(journalTitle);
-                    const normBeall = normalizeText(beallJournal);
-                    if (normTitle === normBeall) results.beallMatchPercent = 100;
-                    else if (normTitle.includes(normBeall) || normBeall.includes(normTitle)) results.beallMatchPercent = 90;
-                    else results.beallMatchPercent = 75;
-                    
-                    console.log(`⚠️ قائمة بيل: "${beallJournal}" (تطابق ${results.beallMatchPercent}%)`);
+                    results.beallMatchPercent = 95;
+                    console.log(`⚠️ بيل: "${beallJournal}"`);
                     break;
                 }
             }
 
             if (!results.inIraqBlacklist && !results.inBeall) {
-                console.log(`✅ المجلة "${journalTitle}" غير موجودة في القوائم السوداء`);
+                console.log(`✅ غير موجود في القوائم`);
+            } else {
+                console.log(`📊 النتيجة: Beall=${results.inBeall}, Iraq=${results.inIraqBlacklist}`);
             }
 
             return results;
         }
 
-        // دالة عرض التحذير
+        // ========== عرض التحذير ==========
         function getBlacklistWarningHTML(title, issn) {
             if (!title || title === 'غير معروف') return '';
             
@@ -441,8 +447,7 @@
                                 هذه المجلة <strong>موجودة في القائمة السوداء لوزارة التعليم العالي والبحث العلمي العراقية</strong><br>
                                 <hr style="margin: 10px 0;">
                                 <small>📋 التطابق مع: "${escapeHtml(checkResult.iraqMatch)}"</small><br>
-                                <small>📊 نسبة التطابق: ${checkResult.iraqMatchPercent}%</small><br>
-                                <strong style="color: #721c24; display: inline-block; margin-top: 10px;">❌ لا يعتد بها للأغراض الترقية والتعيين والمجلات غير المعتمدة من قبل وزارة التعليم العالي العراقية.</strong>
+                                <strong style="color: #721c24; display: inline-block; margin-top: 10px;">❌ لا يعتد بها للأغراض الترقية والتعيين.</strong>
                             </div>
                         </div>
                     </div>
@@ -451,15 +456,14 @@
 
             if (checkResult.inBeall) {
                 html += `
-                    <div class="danger-message" style="border-right: 4px solid #ffc107;">
+                    <div class="danger-message" style="border-right: 4px solid #ffc107; background: #fff3cd;">
                         <div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;">
                             <span style="font-size: 40px;">⚠️</span>
                             <div style="flex: 1;">
-                                <strong style="font-size: 18px;">تحذير!</strong><br>
-                                هذه المجلة <strong>موجودة في قائمة بيل (Beall's List)</strong> للمجلات المفترسة (Predatory Journals)<br>
+                                <strong style="font-size: 18px; color: #856404;">تحذير! مجلة مفترسة (Predatory Journal)</strong><br>
+                                هذه المجلة <strong>موجودة في قائمة بيل (Beall's List)</strong> للمجلات المفترسة<br>
                                 <hr style="margin: 10px 0;">
                                 <small>📋 التطابق مع: "${escapeHtml(checkResult.beallMatch)}"</small><br>
-                                <small>📊 نسبة التطابق: ${checkResult.beallMatchPercent}%</small><br>
                                 <strong style="color: #856404; display: inline-block; margin-top: 10px;">❌ لا ينصح بالنشر في هذه المجلة أو الاعتماد عليها في البحوث الأكاديمية.</strong>
                             </div>
                         </div>
@@ -474,11 +478,7 @@
                             <span style="font-size: 30px;">✅</span>
                             <div>
                                 <strong>المجلة آمنة</strong><br>
-                                لم يتم العثور على هذه المجلة في:
-                                <ul style="margin: 5px 20px 0 0;">
-                                    <li>القائمة السوداء لوزارة التعليم العالي العراقية</li>
-                                    <li>قائمة بيل (Beall's List) للمجلات المفترسة</li>
-                                </ul>
+                                لم يتم العثور على هذه المجلة في القوائم السوداء.
                             </div>
                         </div>
                     </div>
@@ -491,55 +491,73 @@
         // ========== تحميل القوائم ==========
         async function loadBeallList() {
             try {
-                const response = await fetch('beall_list.json');
+                const response = await fetch('beall_list.json?t=' + Date.now());
                 if (response.ok) {
                     beallList = await response.json();
                     console.log(`✅ تم تحميل ${beallList.length} مجلة من قائمة بيل`);
+                    
+                    // عرض أول 10 مجلات للتشخيص
+                    console.log('📋 أول 10 مجلات في قائمة بيل:');
+                    beallList.slice(0, 10).forEach((j, i) => console.log(`   ${i+1}. ${j}`));
+                    
+                    updateListsStatus();
                 } else {
-                    console.warn('❌ لم يتم العثور على ملف beall_list.json');
-                    document.getElementById('listsStatus').innerHTML = '⚠️ لم يتم العثور على قائمة بيل';
+                    console.warn('❌ فشل تحميل beall_list.json - status:', response.status);
+                    document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل قائمة بيل';
                 }
             } catch (e) {
-                console.warn('❌ خطأ في تحميل قائمة بيل:', e);
+                console.error('❌ خطأ في تحميل قائمة بيل:', e);
                 document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل قائمة بيل';
             }
-            updateListsStatus();
         }
 
         async function loadIraqBlacklist() {
             try {
-                const response = await fetch('blacklist.json');
+                const response = await fetch('blacklist.json?t=' + Date.now());
                 if (response.ok) {
                     iraqBlacklist = await response.json();
                     console.log(`✅ تم تحميل ${iraqBlacklist.length} مجلة من القائمة السوداء العراقية`);
-                    // عرض أول 5 مجلات للتشخيص
-                    console.log('📋 أول 5 مجلات في القائمة العراقية:');
-                    iraqBlacklist.slice(0, 5).forEach(j => console.log(`   - ${j}`));
+                    
+                    // عرض أول 10 مجلات للتشخيص
+                    console.log('📋 أول 10 مجلات في القائمة العراقية:');
+                    iraqBlacklist.slice(0, 10).forEach((j, i) => console.log(`   ${i+1}. ${j}`));
+                    
+                    updateListsStatus();
                 } else {
-                    console.warn('❌ لم يتم العثور على ملف blacklist.json');
-                    document.getElementById('listsStatus').innerHTML = '⚠️ لم يتم العثور على القائمة السوداء العراقية';
+                    console.warn('❌ فشل تحميل blacklist.json - status:', response.status);
+                    document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل القائمة العراقية';
                 }
             } catch (e) {
-                console.warn('❌ خطأ في تحميل القائمة السوداء العراقية:', e);
-                document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل القائمة السوداء العراقية';
+                console.error('❌ خطأ في تحميل القائمة العراقية:', e);
+                document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل القائمة العراقية';
             }
-            updateListsStatus();
         }
 
         function updateListsStatus() {
             const statusDiv = document.getElementById('listsStatus');
+            const debugDiv = document.getElementById('debugInfo');
+            
             if (beallList.length > 0 && iraqBlacklist.length > 0) {
                 statusDiv.innerHTML = `✅ تم التحميل | 📋 بيل: ${beallList.length} | 🇮🇶 العراق: ${iraqBlacklist.length}`;
                 statusDiv.style.background = '#d4edda';
                 statusDiv.style.color = '#155724';
+                
+                debugDiv.innerHTML = `
+                    <strong>🔧 معلومات التشخيص:</strong><br>
+                    📋 قائمة بيل: ${beallList.length} مجلة<br>
+                    🇮🇶 القائمة العراقية: ${iraqBlacklist.length} مجلة<br>
+                    📝 مثال من بيل: "${beallList[0] || 'لا يوجد'}"<br>
+                    📝 مثال من العراق: "${iraqBlacklist[0] || 'لا يوجد'}"
+                `;
+                debugDiv.style.display = 'block';
             } else if (beallList.length > 0 || iraqBlacklist.length > 0) {
-                statusDiv.innerHTML = `⚠️ تم التحميل جزئياً | 📋 بيل: ${beallList.length} | 🇮🇶 العراق: ${iraqBlacklist.length}`;
+                statusDiv.innerHTML = `⚠️ تحميل جزئي | بيل: ${beallList.length} | العراق: ${iraqBlacklist.length}`;
                 statusDiv.style.background = '#fff3cd';
                 statusDiv.style.color = '#856404';
             }
         }
 
-        // بدء تحميل القوائم
+        // ========== تحميل القوائم عند بدء التشغيل ==========
         loadBeallList();
         loadIraqBlacklist();
 
@@ -616,7 +634,6 @@
             for (let i = 0; i < journals.length; i++) {
                 const j = journals[i];
                 
-                // المعلومات الأساسية
                 const title = j['dc:title'] || 'غير معروف';
                 const publisher = j['dc:publisher'] || 'غير معروف';
                 const issn = j['prism:issn'] || 'غير متوفر';
@@ -625,55 +642,38 @@
                 const sourceId = j['source-id'] || 'غير متوفر';
                 const openaccess = j['openaccess'] === '1' ? 'نعم' : (j['openaccess'] === '0' ? 'لا' : 'غير محدد');
                 
-                // سنوات التغطية
                 const coverageStart = j['coverageStartYear'] || j['coverage-start-year']?.['$'] || 'غير متوفر';
                 const coverageEnd = j['coverageEndYear'] || j['coverage-end-year']?.['$'] || 'غير متوفر';
                 const coverageText = j['coverage-text'] || j['text'] || null;
-                const coverageType = j['coverage-type']?.['$'] || null;
                 
-                // مقاييس التأثير
                 const citeScoreCurrent = j['citeScoreYearInfoList']?.['citeScoreCurrentMetric'] || j['citeScoreCurrentMetric'] || null;
                 const citeScoreYear = j['citeScoreYearInfoList']?.['citeScoreCurrentMetricYear'] || null;
-                const citeScoreTracker = j['citeScoreYearInfoList']?.['citeScoreTracker'] || null;
-                const citeScoreTrackerYear = j['citeScoreYearInfoList']?.['citeScoreTrackerYear'] || null;
                 
-                // SJR
                 let sjrList = [];
                 if (j['SJRList']?.['SJR']) {
                     const sjrItems = Array.isArray(j['SJRList']['SJR']) ? j['SJRList']['SJR'] : [j['SJRList']['SJR']];
                     sjrList = sjrItems.map(item => ({ year: item['@year'], value: item['$'] }));
-                } else if (j['SJR']) {
-                    sjrList = [{ year: j['SJR']['@year'] || '2024', value: j['SJR']['@sjr'] || j['SJR']['$'] }];
                 }
                 
-                // SNIP
                 let snipList = [];
                 if (j['SNIPList']?.['SNIP']) {
                     const snipItems = Array.isArray(j['SNIPList']['SNIP']) ? j['SNIPList']['SNIP'] : [j['SNIPList']['SNIP']];
                     snipList = snipItems.map(item => ({ year: item['@year'], value: item['$'] }));
-                } else if (j['SNIP']) {
-                    snipList = [{ year: j['SNIP']['@year'], value: j['SNIP']['$'] }];
                 }
                 
-                // التصنيفات الموضوعية
                 let subjects = [];
                 if (j['subject-area']) {
                     const areas = Array.isArray(j['subject-area']) ? j['subject-area'] : [j['subject-area']];
-                    subjects = areas.map(area => ({
-                        name: area['$'] || 'غير محدد',
-                        abbrev: area['@abbrev'] || '',
-                        code: area['@code'] || ''
-                    }));
+                    subjects = areas.map(area => ({ name: area['$'] || 'غير محدد', code: area['@code'] || '' }));
                 }
                 
-                // الروابط
                 let links = [];
                 if (j['link']) {
                     const linkItems = Array.isArray(j['link']) ? j['link'] : [j['link']];
                     links = linkItems.map(link => ({ ref: link['@ref'], href: link['@href'] }));
                 }
 
-                // عرض رسالة التحقق من القوائم السوداء (الجزء المهم!)
+                // عرض التحذير
                 html += getBlacklistWarningHTML(title, issn);
                 
                 html += `
@@ -683,7 +683,6 @@
                             <span class="badge">${sourceType}</span>
                         </div>
                         
-                        <!-- المعلومات الأساسية -->
                         <div class="section">
                             <div class="section-title">📋 المعلومات الأساسية</div>
                             <div class="info-grid">
@@ -695,46 +694,35 @@
                             </div>
                         </div>
                         
-                        <!-- سنوات التغطية -->
                         <div class="section">
                             <div class="section-title">📅 سنوات التغطية في Scopus</div>
                             <div class="info-grid">
                                 <div class="info-item"><strong>سنة البدء</strong><span>${coverageStart}</span></div>
                                 <div class="info-item"><strong>سنة النهاية</strong><span>${coverageEnd}</span></div>
                                 ${coverageText ? `<div class="info-item"><strong>نص التغطية</strong><span>${escapeHtml(coverageText)}</span></div>` : ''}
-                                ${coverageType ? `<div class="info-item"><strong>نوع التغطية</strong><span>${coverageType}</span></div>` : ''}
                             </div>
                         </div>
                 `;
                 
-                // CiteScore
                 if (citeScoreCurrent) {
                     html += `
                         <div class="section">
-                            <div class="section-title">📊 CiteScore (مقياس التأثير)</div>
+                            <div class="section-title">📊 CiteScore</div>
                             <div class="metrics-grid">
                                 <div class="metric-card">
                                     <div class="metric-value">${citeScoreCurrent}</div>
-                                    <div class="metric-label">CiteScore الحالي</div>
+                                    <div class="metric-label">CiteScore</div>
                                     <div class="metric-year">السنة: ${citeScoreYear || '2024'}</div>
                                 </div>
-                                ${citeScoreTracker ? `
-                                <div class="metric-card">
-                                    <div class="metric-value">${citeScoreTracker}</div>
-                                    <div class="metric-label">CiteScore Tracker</div>
-                                    <div class="metric-year">السنة: ${citeScoreTrackerYear || '2025'}</div>
-                                </div>
-                                ` : ''}
                             </div>
                         </div>
                     `;
                 }
                 
-                // SJR
                 if (sjrList.length > 0) {
                     html += `
                         <div class="section">
-                            <div class="section-title">⭐ SJR (SCImago Journal Rank)</div>
+                            <div class="section-title">⭐ SJR</div>
                             <div class="metrics-grid">
                                 ${sjrList.map(sjr => `
                                     <div class="metric-card">
@@ -748,11 +736,10 @@
                     `;
                 }
                 
-                // SNIP
                 if (snipList.length > 0) {
                     html += `
                         <div class="section">
-                            <div class="section-title">📈 SNIP (Source Normalized Impact per Paper)</div>
+                            <div class="section-title">📈 SNIP</div>
                             <div class="metrics-grid">
                                 ${snipList.map(snip => `
                                     <div class="metric-card">
@@ -766,45 +753,32 @@
                     `;
                 }
                 
-                // التصنيفات الموضوعية
                 if (subjects.length > 0) {
                     html += `
                         <div class="section">
-                            <div class="section-title">🏷️ التصنيفات الموضوعية (Subject Areas)</div>
+                            <div class="section-title">🏷️ التصنيفات الموضوعية</div>
                             <div>
-                                ${subjects.map(sub => `
-                                    <span class="subject-tag">
-                                        ${escapeHtml(sub.name)}
-                                        ${sub.code ? `<span class="subject-code">(${sub.code})</span>` : ''}
-                                    </span>
-                                `).join('')}
+                                ${subjects.map(sub => `<span class="subject-tag">${escapeHtml(sub.name)} ${sub.code ? `(${sub.code})` : ''}</span>`).join('')}
                             </div>
                         </div>
                     `;
                 }
                 
-                // الروابط
                 if (links.length > 0) {
                     html += `
                         <div class="section">
                             <div class="section-title">🔗 الروابط</div>
-                            <ul class="link-list">
-                                ${links.map(link => `
-                                    <li>
-                                        <strong>${link.ref}:</strong><br>
-                                        <a href="${link.href}" target="_blank">${link.href}</a>
-                                    </li>
-                                `).join('')}
+                            <ul>
+                                ${links.map(link => `<li><a href="${link.href}" target="_blank">${link.ref}</a></li>`).join('')}
                             </ul>
                         </div>
                     `;
                 }
                 
-                // البيانات الخام
                 html += `
                     <details>
                         <summary style="cursor: pointer; color: #667eea; margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px;">
-                            📄 عرض جميع البيانات الخام من Scopus (JSON)
+                            📄 البيانات الخام من Scopus
                         </summary>
                         <div class="raw-data">${JSON.stringify(j, null, 2)}</div>
                     </details>
