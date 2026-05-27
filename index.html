@@ -265,6 +265,14 @@
             color: #666;
             border-top: 1px solid #e0e0e0;
         }
+        .list-status {
+            background: #e3f2fd;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+            margin-top: 10px;
+        }
         hr { margin: 20px 0; }
     </style>
 </head>
@@ -289,11 +297,13 @@
                     📝 أمثلة: 
                     <span onclick="setExample('0002-9890')">0002-9890 (American Mathematical Monthly)</span> • 
                     <span onclick="setExample('2166-0727')">2166-0727 (CISTI)</span> • 
-                    <span onclick="setExample('1937-3333')">1937-3333 (IEEE Reviews)</span>
+                    <span onclick="setExample('1937-3333')">1937-3333 (IEEE Reviews)</span> •
+                    <span onclick="setExample('Bulletin of National Institute of Health Sciences')">Bulletin of National Institute of Health Sciences</span>
                 </div>
                 <div class="example" style="margin-top: 10px; color:#856404;">
                     ⚠️ سيتم التحقق من المجلة تلقائياً في القائمة السوداء العراقية وقائمة بيل
                 </div>
+                <div id="listsStatus" class="list-status">🔄 جاري تحميل القوائم...</div>
             </div>
             
             <div id="result" class="result"></div>
@@ -304,44 +314,236 @@
     </div>
 
     <script>
-        // ========== تحميل القوائم السوداء ==========
+        // ========== المتغيرات العامة ==========
         let beallList = [];
         let iraqBlacklist = [];
 
-        // تحميل قائمة بيل
+        // ========== دوال تطبيع النص المتقدمة ==========
+        function normalizeText(text) {
+            if (!text) return '';
+            return text.toLowerCase()
+                .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FFa-zA-Z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // دالة المقارنة الذكية
+        function fuzzyMatch(journalTitle, blacklistEntry) {
+            if (!journalTitle || !blacklistEntry) return false;
+            
+            const normalizedTitle = normalizeText(journalTitle);
+            const normalizedBlack = normalizeText(blacklistEntry);
+            
+            // 1. تطابق تام
+            if (normalizedTitle === normalizedBlack) return true;
+            
+            // 2. العنوان يحتوي على النص من القائمة السوداء
+            if (normalizedTitle.includes(normalizedBlack)) return true;
+            
+            // 3. النص من القائمة السوداء يحتوي على العنوان
+            if (normalizedBlack.includes(normalizedTitle)) return true;
+            
+            // 4. إزالة الكلمات الشائعة ومقارنة الكلمات الرئيسية
+            const commonWords = ['the', 'of', 'and', 'in', 'to', 'for', 'a', 'an', 'journal', 'international', 
+                                 'bulletin', 'research', 'science', 'sciences', 'studies', 'university', 'review',
+                                 'letters', 'proceedings', 'annals', 'archives', 'advances', 'current'];
+            
+            let titleWords = normalizedTitle.split(' ').filter(w => !commonWords.includes(w) && w.length > 2);
+            let blackWords = normalizedBlack.split(' ').filter(w => !commonWords.includes(w) && w.length > 2);
+            
+            if (titleWords.length === 0 || blackWords.length === 0) return false;
+            
+            let matchCount = 0;
+            for (let tw of titleWords) {
+                for (let bw of blackWords) {
+                    if (bw === tw || bw.includes(tw) || tw.includes(bw)) {
+                        matchCount++;
+                        break;
+                    }
+                }
+            }
+            
+            let matchRatio = matchCount / Math.max(titleWords.length, blackWords.length);
+            return matchRatio > 0.6;  // 60% تطابق كافٍ للتحذير
+        }
+
+        // دالة التحقق من القوائم السوداء
+        function checkBlacklists(journalTitle, journalIssn = '') {
+            let results = {
+                inBeall: false,
+                inIraqBlacklist: false,
+                beallMatch: null,
+                iraqMatch: null,
+                beallMatchPercent: 0,
+                iraqMatchPercent: 0
+            };
+
+            if (!journalTitle || journalTitle === 'غير معروف') return results;
+
+            console.log(`🔍 جاري فحص المجلة: "${journalTitle}"`);
+            
+            // التحقق في القائمة السوداء العراقية
+            for (const blackJournal of iraqBlacklist) {
+                if (fuzzyMatch(journalTitle, blackJournal)) {
+                    results.inIraqBlacklist = true;
+                    results.iraqMatch = blackJournal;
+                    
+                    // حساب نسبة التطابق التقريبية
+                    const normTitle = normalizeText(journalTitle);
+                    const normBlack = normalizeText(blackJournal);
+                    if (normTitle === normBlack) results.iraqMatchPercent = 100;
+                    else if (normTitle.includes(normBlack) || normBlack.includes(normTitle)) results.iraqMatchPercent = 90;
+                    else results.iraqMatchPercent = 75;
+                    
+                    console.log(`⚠️ القائمة السوداء العراقية: "${blackJournal}" (تطابق ${results.iraqMatchPercent}%)`);
+                    break;
+                }
+            }
+
+            // التحقق في قائمة بيل
+            for (const beallJournal of beallList) {
+                if (fuzzyMatch(journalTitle, beallJournal)) {
+                    results.inBeall = true;
+                    results.beallMatch = beallJournal;
+                    
+                    const normTitle = normalizeText(journalTitle);
+                    const normBeall = normalizeText(beallJournal);
+                    if (normTitle === normBeall) results.beallMatchPercent = 100;
+                    else if (normTitle.includes(normBeall) || normBeall.includes(normTitle)) results.beallMatchPercent = 90;
+                    else results.beallMatchPercent = 75;
+                    
+                    console.log(`⚠️ قائمة بيل: "${beallJournal}" (تطابق ${results.beallMatchPercent}%)`);
+                    break;
+                }
+            }
+
+            if (!results.inIraqBlacklist && !results.inBeall) {
+                console.log(`✅ المجلة "${journalTitle}" غير موجودة في القوائم السوداء`);
+            }
+
+            return results;
+        }
+
+        // دالة عرض التحذير
+        function getBlacklistWarningHTML(title, issn) {
+            if (!title || title === 'غير معروف') return '';
+            
+            const checkResult = checkBlacklists(title, issn);
+            let html = '';
+
+            if (checkResult.inIraqBlacklist) {
+                html += `
+                    <div class="danger-message" style="border-right: 4px solid #dc3545;">
+                        <div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;">
+                            <span style="font-size: 40px;">🚨</span>
+                            <div style="flex: 1;">
+                                <strong style="font-size: 18px; color: #721c24;">تحذير خطير!</strong><br>
+                                هذه المجلة <strong>موجودة في القائمة السوداء لوزارة التعليم العالي والبحث العلمي العراقية</strong><br>
+                                <hr style="margin: 10px 0;">
+                                <small>📋 التطابق مع: "${escapeHtml(checkResult.iraqMatch)}"</small><br>
+                                <small>📊 نسبة التطابق: ${checkResult.iraqMatchPercent}%</small><br>
+                                <strong style="color: #721c24; display: inline-block; margin-top: 10px;">❌ لا يعتد بها للأغراض الترقية والتعيين والمجلات غير المعتمدة من قبل وزارة التعليم العالي العراقية.</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (checkResult.inBeall) {
+                html += `
+                    <div class="danger-message" style="border-right: 4px solid #ffc107;">
+                        <div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;">
+                            <span style="font-size: 40px;">⚠️</span>
+                            <div style="flex: 1;">
+                                <strong style="font-size: 18px;">تحذير!</strong><br>
+                                هذه المجلة <strong>موجودة في قائمة بيل (Beall's List)</strong> للمجلات المفترسة (Predatory Journals)<br>
+                                <hr style="margin: 10px 0;">
+                                <small>📋 التطابق مع: "${escapeHtml(checkResult.beallMatch)}"</small><br>
+                                <small>📊 نسبة التطابق: ${checkResult.beallMatchPercent}%</small><br>
+                                <strong style="color: #856404; display: inline-block; margin-top: 10px;">❌ لا ينصح بالنشر في هذه المجلة أو الاعتماد عليها في البحوث الأكاديمية.</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (!checkResult.inBeall && !checkResult.inIraqBlacklist && title && title !== 'غير معروف') {
+                html += `
+                    <div class="safe-message">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <span style="font-size: 30px;">✅</span>
+                            <div>
+                                <strong>المجلة آمنة</strong><br>
+                                لم يتم العثور على هذه المجلة في:
+                                <ul style="margin: 5px 20px 0 0;">
+                                    <li>القائمة السوداء لوزارة التعليم العالي العراقية</li>
+                                    <li>قائمة بيل (Beall's List) للمجلات المفترسة</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        // ========== تحميل القوائم ==========
         async function loadBeallList() {
             try {
                 const response = await fetch('beall_list.json');
                 if (response.ok) {
                     beallList = await response.json();
-                    console.log(`تم تحميل ${beallList.length} مجلة من قائمة بيل`);
+                    console.log(`✅ تم تحميل ${beallList.length} مجلة من قائمة بيل`);
                 } else {
-                    console.warn('لم يتم العثور على ملف beall_list.json');
+                    console.warn('❌ لم يتم العثور على ملف beall_list.json');
+                    document.getElementById('listsStatus').innerHTML = '⚠️ لم يتم العثور على قائمة بيل';
                 }
             } catch (e) {
-                console.warn('خطأ في تحميل قائمة بيل:', e);
+                console.warn('❌ خطأ في تحميل قائمة بيل:', e);
+                document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل قائمة بيل';
             }
+            updateListsStatus();
         }
 
-        // تحميل القائمة السوداء العراقية
         async function loadIraqBlacklist() {
             try {
                 const response = await fetch('blacklist.json');
                 if (response.ok) {
                     iraqBlacklist = await response.json();
-                    console.log(`تم تحميل ${iraqBlacklist.length} مجلة من القائمة السوداء العراقية`);
+                    console.log(`✅ تم تحميل ${iraqBlacklist.length} مجلة من القائمة السوداء العراقية`);
+                    // عرض أول 5 مجلات للتشخيص
+                    console.log('📋 أول 5 مجلات في القائمة العراقية:');
+                    iraqBlacklist.slice(0, 5).forEach(j => console.log(`   - ${j}`));
                 } else {
-                    console.warn('لم يتم العثور على ملف blacklist.json');
+                    console.warn('❌ لم يتم العثور على ملف blacklist.json');
+                    document.getElementById('listsStatus').innerHTML = '⚠️ لم يتم العثور على القائمة السوداء العراقية';
                 }
             } catch (e) {
-                console.warn('خطأ في تحميل القائمة السوداء العراقية:', e);
+                console.warn('❌ خطأ في تحميل القائمة السوداء العراقية:', e);
+                document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل القائمة السوداء العراقية';
+            }
+            updateListsStatus();
+        }
+
+        function updateListsStatus() {
+            const statusDiv = document.getElementById('listsStatus');
+            if (beallList.length > 0 && iraqBlacklist.length > 0) {
+                statusDiv.innerHTML = `✅ تم التحميل | 📋 بيل: ${beallList.length} | 🇮🇶 العراق: ${iraqBlacklist.length}`;
+                statusDiv.style.background = '#d4edda';
+                statusDiv.style.color = '#155724';
+            } else if (beallList.length > 0 || iraqBlacklist.length > 0) {
+                statusDiv.innerHTML = `⚠️ تم التحميل جزئياً | 📋 بيل: ${beallList.length} | 🇮🇶 العراق: ${iraqBlacklist.length}`;
+                statusDiv.style.background = '#fff3cd';
+                statusDiv.style.color = '#856404';
             }
         }
 
-        // تحميل القوائم عند بدء التشغيل
+        // بدء تحميل القوائم
         loadBeallList();
         loadIraqBlacklist();
 
+        // ========== Scopus API ==========
         const STORAGE_KEY = 'scopus_api_key';
         
         document.addEventListener('DOMContentLoaded', function() {
@@ -353,90 +555,6 @@
             if (this.value.trim()) localStorage.setItem(STORAGE_KEY, this.value.trim());
             else localStorage.removeItem(STORAGE_KEY);
         });
-        
-        // ========== دالة التحقق من القوائم السوداء ==========
-        function checkBlacklists(journalTitle, journalIssn = '') {
-            let results = {
-                inBeall: false,
-                inIraqBlacklist: false,
-                beallMatch: null,
-                iraqMatch: null
-            };
-
-            if (!journalTitle) return results;
-
-            // تطبيع النص للمقارنة (إزالة علامات الترقيم، تحويل إلى حروف صغيرة)
-            const normalizeText = (text) => {
-                if (!text) return '';
-                return text.toLowerCase()
-                    .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FFa-zA-Z0-9\s]/g, '')
-                    .trim();
-            };
-
-            const normalizedTitle = normalizeText(journalTitle);
-            
-            // التحقق في قائمة بيل
-            for (const beallJournal of beallList) {
-                const normalizedBeall = normalizeText(beallJournal);
-                if (normalizedTitle === normalizedBeall || 
-                    normalizedTitle.includes(normalizedBeall) || 
-                    normalizedBeall.includes(normalizedTitle)) {
-                    results.inBeall = true;
-                    results.beallMatch = beallJournal;
-                    break;
-                }
-            }
-
-            // التحقق في القائمة السوداء العراقية
-            for (const blackJournal of iraqBlacklist) {
-                const normalizedBlack = normalizeText(blackJournal);
-                if (normalizedTitle === normalizedBlack || 
-                    normalizedTitle.includes(normalizedBlack) || 
-                    normalizedBlack.includes(normalizedTitle)) {
-                    results.inIraqBlacklist = true;
-                    results.iraqMatch = blackJournal;
-                    break;
-                }
-            }
-
-            return results;
-        }
-
-        // ========== دالة عرض رسالة التحذير ==========
-        function getBlacklistWarningHTML(title, issn) {
-            const checkResult = checkBlacklists(title, issn);
-            let html = '';
-
-            if (checkResult.inBeall) {
-                html += `
-                    <div class="danger-message">
-                        ⚠️ <strong>تحذير خطير!</strong> هذه المجلة موجودة في <strong>قائمة بيل (Beall's List)</strong> للمجلات المفترسة (Predatory Journals)<br>
-                        <small>📋 التطابق مع: "${checkResult.beallMatch}"</small><br>
-                        <strong>❌ لا ينصح بالنشر في هذه المجلة أو الاعتماد عليها في البحوث الأكاديمية.</strong>
-                    </div>
-                `;
-            }
-
-            if (checkResult.inIraqBlacklist) {
-                html += `
-                    <div class="danger-message">
-                        ⚠️ <strong>تحذير!</strong> هذه المجلة موجودة في <strong>القائمة السوداء لوزارة التعليم العالي والبحث العلمي العراقية</strong><br>
-                        <small>📋 التطابق مع: "${checkResult.iraqMatch}"</small><br>
-                        <strong>❌ لا يعتد بها للأغراض الترقية والتعيين والمجلات الغير معتمدة من قبل وزارة التعليم العالي العراقية.</strong>
-                    </div>
-                `;
-            }
-
-            if (!checkResult.inBeall && !checkResult.inIraqBlacklist && title) {
-                html += `
-                    <div class="safe-message">
-                        ✅ <strong>المجلة آمنة</strong> - لم يتم العثور على هذه المجلة في القائمة السوداء لوزارة التعليم العالي العراقية أو قائمة بيل للمجلات المفترسة.
-                    </div>
-                `;
-            }
-
-            return html;
-        }
         
         async function searchJournal() {
             const query = document.getElementById('searchInput').value.trim();
@@ -555,7 +673,7 @@
                     links = linkItems.map(link => ({ ref: link['@ref'], href: link['@href'] }));
                 }
 
-                // عرض رسالة التحقق من القوائم السوداء
+                // عرض رسالة التحقق من القوائم السوداء (الجزء المهم!)
                 html += getBlacklistWarningHTML(title, issn);
                 
                 html += `
