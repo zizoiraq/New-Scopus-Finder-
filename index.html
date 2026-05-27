@@ -132,14 +132,6 @@
             border-right: 4px solid #28a745;
             margin-bottom: 20px;
         }
-        .warning-message {
-            background: #fff3cd;
-            color: #856404;
-            padding: 15px;
-            border-radius: 10px;
-            border-right: 4px solid #ffc107;
-            margin-bottom: 20px;
-        }
         .journal-card {
             background: #f8f9fa;
             border-radius: 12px;
@@ -298,11 +290,11 @@
                     📝 أمثلة: 
                     <span onclick="setExample('New England Journal of Medicine')">✅ NEJM (مجلة آمنة)</span> •
                     <span onclick="setExample('Oncotarget')">⚠️ Oncotarget (قائمة بيل)</span> •
-                    <span onclick="setExample('Acta de Gerencia Ciencia')">⚠️ Acta de Gerencia Ciencia</span> •
+                    <span onclick="setExample('Acta de Gerencia Ciencia (CAGENA)')">⚠️ Acta de Gerencia Ciencia</span> •
                     <span onclick="setExample('Bulletin of National Institute of Health Sciences')">⚠️ Bulletin NIH (العراق)</span>
                 </div>
-                <div class="example" style="margin-top: 10px; color:#856404;">
-                    ⚠️ سيتم التحقق من المجلة في القوائم السوداء (مقارنة دقيقة بالاسم الكامل)
+                <div class="example" style="margin-top: 10px; color:#28a745;">
+                    ✅ المقارنة تتم بالتطابق التام للاسم (بدون أي مقارنات جزئية)
                 </div>
                 <div id="listsStatus" class="list-status">🔄 جاري تحميل القوائم...</div>
             </div>
@@ -319,62 +311,43 @@
         let beallList = [];
         let iraqBlacklist = [];
         
-        // ========== تحويل Set للمقارنة السريعة ==========
-        let beallSet = new Set();
-        let iraqSet = new Set();
-        let beallNormalized = new Map();  // الاسم المقيس -> الاسم الأصلي
-        let iraqNormalized = new Map();
-
-        // ========== دالة تطبيع دقيقة (للمقارنة الصارمة) ==========
-        function normalizeExact(text) {
+        // ========== Set للتخزين (للبحث السريع) ==========
+        let beallLowerCaseSet = new Set();
+        let iraqLowerCaseSet = new Set();
+        
+        // ========== دالة تطبيع بسيطة (تحويل إلى حروف صغيرة فقط) ==========
+        function normalizeSimple(text) {
             if (!text) return '';
-            return text
-                .toLowerCase()
-                .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FFa-z0-9]/gi, '')  // إزالة كل الرموز
-                .trim();
+            // فقط تحويل إلى حروف صغيرة وإزالة المسافات الزائدة
+            return text.toLowerCase().trim();
         }
         
-        // ========== دالة تطبيع مع احتفاظ بالمسافات ==========
-        function normalizeWithSpaces(text) {
-            if (!text) return '';
-            return text
-                .toLowerCase()
-                .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FFa-z0-9\s]/gi, '')  // إزالة الرموز مع الاحتفاظ بالمسافات
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
-        // ========== تحضير القوائم للمقارنة السريعة ==========
+        // ========== تحضير القوائم ==========
         function prepareLists() {
-            // تجهيز قائمة بيل
-            beallSet.clear();
-            beallNormalized.clear();
+            beallLowerCaseSet.clear();
             for (let journal of beallList) {
-                const exact = normalizeExact(journal);
-                const spaced = normalizeWithSpaces(journal);
-                beallSet.add(exact);
-                beallSet.add(spaced);
-                beallNormalized.set(exact, journal);
-                beallNormalized.set(spaced, journal);
+                beallLowerCaseSet.add(normalizeSimple(journal));
             }
             
-            // تجهيز القائمة العراقية
-            iraqSet.clear();
-            iraqNormalized.clear();
+            iraqLowerCaseSet.clear();
             for (let journal of iraqBlacklist) {
-                const exact = normalizeExact(journal);
-                const spaced = normalizeWithSpaces(journal);
-                iraqSet.add(exact);
-                iraqSet.add(spaced);
-                iraqNormalized.set(exact, journal);
-                iraqNormalized.set(spaced, journal);
+                iraqLowerCaseSet.add(normalizeSimple(journal));
             }
             
-            console.log(`✅ تم تجهيز ${beallSet.size} مدخل في قاموس بيل`);
-            console.log(`✅ تم تجهيز ${iraqSet.size} مدخل في قاموس العراق`);
+            console.log(`✅ تم تجهيز ${beallLowerCaseSet.size} مجلة في قائمة بيل (تطابق تام)`);
+            console.log(`✅ تم تجهيز ${iraqLowerCaseSet.size} مجلة في القائمة العراقية (تطابق تام)`);
+            
+            // عرض أول 10 مجلات من كل قائمة للتشخيص
+            console.log('📋 أول 10 مجلات في قائمة بيل:');
+            let beallArray = Array.from(beallLowerCaseSet).slice(0, 10);
+            beallArray.forEach(j => console.log(`   - ${j}`));
+            
+            console.log('📋 أول 10 مجلات في القائمة العراقية:');
+            let iraqArray = Array.from(iraqLowerCaseSet).slice(0, 10);
+            iraqArray.forEach(j => console.log(`   - ${j}`));
         }
 
-        // ========== دالة التحقق الدقيقة (مقارنة الاسم الكامل) ==========
+        // ========== دالة التحقق (تطابق تام فقط) ==========
         function checkBlacklistsExact(searchQuery) {
             let results = {
                 inBeall: false,
@@ -385,52 +358,35 @@
 
             if (!searchQuery) return results;
 
-            const exactForm = normalizeExact(searchQuery);
-            const spacedForm = normalizeWithSpaces(searchQuery);
+            const normalizedQuery = normalizeSimple(searchQuery);
             
             console.log(`🔍 فحص: "${searchQuery}"`);
-            console.log(`   الصيغة المقيسة (بدون رموز): "${exactForm}"`);
+            console.log(`   بعد التحويل إلى حروف صغيرة: "${normalizedQuery}"`);
             
-            // التحقق في قائمة بيل (مقارنة صارمة بالاسم الكامل)
-            if (beallSet.has(exactForm) || beallSet.has(spacedForm)) {
+            // البحث في قائمة بيل (تطابق تام فقط)
+            if (beallLowerCaseSet.has(normalizedQuery)) {
                 results.inBeall = true;
-                results.beallMatch = beallNormalized.get(exactForm) || beallNormalized.get(spacedForm);
-                console.log(`⚠️ موجود في قائمة بيل: "${results.beallMatch}"`);
-            } else {
-                // بحث جزئي احترازي فقط إذا كان الاسم طويلاً (>30 حرف)
-                if (searchQuery.length > 30) {
-                    for (let item of beallList) {
-                        if (normalizeExact(item).includes(exactForm) || exactForm.includes(normalizeExact(item))) {
-                            if (normalizeExact(item).length > 10 && exactForm.length > 10) {
-                                results.inBeall = true;
-                                results.beallMatch = item;
-                                console.log(`⚠️ (جزئي) في بيل: "${item}"`);
-                                break;
-                            }
-                        }
+                // البحث عن الاسم الأصلي
+                for (let journal of beallList) {
+                    if (normalizeSimple(journal) === normalizedQuery) {
+                        results.beallMatch = journal;
+                        break;
                     }
                 }
+                console.log(`⚠️ موجود في قائمة بيل (تطابق تام): "${results.beallMatch}"`);
             }
             
-            // التحقق في القائمة العراقية
-            if (iraqSet.has(exactForm) || iraqSet.has(spacedForm)) {
+            // البحث في القائمة العراقية (تطابق تام فقط)
+            if (iraqLowerCaseSet.has(normalizedQuery)) {
                 results.inIraqBlacklist = true;
-                results.iraqMatch = iraqNormalized.get(exactForm) || iraqNormalized.get(spacedForm);
-                console.log(`⚠️ موجود في القائمة العراقية: "${results.iraqMatch}"`);
-            } else {
-                // بحث جزئي احترازي
-                if (searchQuery.length > 30) {
-                    for (let item of iraqBlacklist) {
-                        if (normalizeExact(item).includes(exactForm) || exactForm.includes(normalizeExact(item))) {
-                            if (normalizeExact(item).length > 10 && exactForm.length > 10) {
-                                results.inIraqBlacklist = true;
-                                results.iraqMatch = item;
-                                console.log(`⚠️ (جزئي) في العراق: "${item}"`);
-                                break;
-                            }
-                        }
+                // البحث عن الاسم الأصلي
+                for (let journal of iraqBlacklist) {
+                    if (normalizeSimple(journal) === normalizedQuery) {
+                        results.iraqMatch = journal;
+                        break;
                     }
                 }
+                console.log(`⚠️ موجود في القائمة العراقية (تطابق تام): "${results.iraqMatch}"`);
             }
 
             if (!results.inBeall && !results.inIraqBlacklist) {
@@ -505,14 +461,6 @@
                 if (response.ok) {
                     beallList = await response.json();
                     console.log(`✅ تم تحميل ${beallList.length} مجلة من قائمة بيل`);
-                    
-                    // التحقق من وجود المجلات المعروفة
-                    const testJournals = ['Oncotarget', 'Acta de Gerencia Ciencia', 'Hygeia: Journal for Drugs and Medicines'];
-                    for (let tj of testJournals) {
-                        const found = beallList.some(j => j.toLowerCase().includes(tj.toLowerCase()));
-                        console.log(`   ${found ? '✅' : '❌'} "${tj}" ${found ? 'موجودة' : 'غير موجودة'} في القائمة`);
-                    }
-                    
                     prepareLists();
                     updateListsStatus();
                 } else {
@@ -547,9 +495,13 @@
             const statusDiv = document.getElementById('listsStatus');
             
             if (beallList.length > 0 && iraqBlacklist.length > 0) {
-                statusDiv.innerHTML = `✅ تم التحميل | 📋 بيل: ${beallList.length} | 🇮🇶 العراق: ${iraqBlacklist.length}`;
+                statusDiv.innerHTML = `✅ تم التحميل | 📋 بيل: ${beallList.length} | 🇮🇶 العراق: ${iraqBlacklist.length} | (تطابق تام)`;
                 statusDiv.style.background = '#d4edda';
                 statusDiv.style.color = '#155724';
+            } else if (beallList.length > 0 || iraqBlacklist.length > 0) {
+                statusDiv.innerHTML = `⚠️ تحميل جزئي | بيل: ${beallList.length} | العراق: ${iraqBlacklist.length}`;
+                statusDiv.style.background = '#fff3cd';
+                statusDiv.style.color = '#856404';
             }
         }
 
