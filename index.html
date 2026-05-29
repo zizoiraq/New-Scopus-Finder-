@@ -245,7 +245,6 @@
         }
         .note { font-size: 12px; color: #888; margin-top: 10px; text-align: center; }
         
-        /* التبويبات (Tabs) */
         .tabs {
             display: flex;
             gap: 10px;
@@ -361,16 +360,13 @@
     </div>
 
     <script>
-        // ========== مفتاح API المدمج ==========
         const SCOPUS_API_KEY = "408e8184e1573553eb";
         
-        // ========== المتغيرات العامة ==========
         let beallList = [];
         let iraqBlacklist = [];
         let beallLowerCaseSet = new Set();
         let iraqLowerCaseSet = new Set();
         
-        // ========== دوال القوائم السوداء ==========
         function normalizeSimple(text) {
             if (!text) return '';
             return text.toLowerCase().trim();
@@ -381,7 +377,6 @@
             for (let journal of beallList) beallLowerCaseSet.add(normalizeSimple(journal));
             iraqLowerCaseSet.clear();
             for (let journal of iraqBlacklist) iraqLowerCaseSet.add(normalizeSimple(journal));
-            console.log(`✅ بيل: ${beallLowerCaseSet.size} | العراق: ${iraqLowerCaseSet.size}`);
         }
 
         function checkBlacklistsExact(searchQuery) {
@@ -419,21 +414,20 @@
             return html;
         }
 
-        // ========== تحميل القوائم ==========
         async function loadBeallList() {
             try {
                 const response = await fetch('beall_list.json?t=' + Date.now());
                 if (response.ok) { beallList = await response.json(); prepareLists(); updateListsStatus(); }
-                else { console.warn('فشل beall_list.json'); document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل قائمة بيل'; }
-            } catch(e) { console.error(e); document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل قائمة بيل'; }
+                else { document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل قائمة بيل'; }
+            } catch(e) { document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل قائمة بيل'; }
         }
 
         async function loadIraqBlacklist() {
             try {
                 const response = await fetch('blacklist.json?t=' + Date.now());
                 if (response.ok) { iraqBlacklist = await response.json(); prepareLists(); updateListsStatus(); }
-                else { console.warn('فشل blacklist.json'); document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل القائمة العراقية'; }
-            } catch(e) { console.error(e); document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل القائمة العراقية'; }
+                else { document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل القائمة العراقية'; }
+            } catch(e) { document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل القائمة العراقية'; }
         }
 
         function updateListsStatus() {
@@ -447,7 +441,6 @@
         loadBeallList();
         loadIraqBlacklist();
 
-        // ========== البحث الرئيسي ==========
         let currentScopusData = null;
         let currentDOAJData = null;
         let currentQuery = '';
@@ -492,7 +485,6 @@
                 const data = await response.json();
                 return { success: true, data: data };
             } catch (error) {
-                console.warn('Scopus error:', error);
                 return { success: false, error: error.message };
             }
         }
@@ -519,7 +511,6 @@
                 const data = await response.json();
                 return { success: true, data: data };
             } catch (error) {
-                console.warn('DOAJ error:', error);
                 return { success: false, error: error.message };
             }
         }
@@ -574,7 +565,6 @@
         }
 
         function renderScopusContent(j) {
-            const title = j['dc:title'] || 'غير معروف';
             const publisher = j['dc:publisher'] || 'غير معروف';
             const issn = j['prism:issn'] || 'غير متوفر';
             const eIssn = j['prism:eIssn'] || 'غير متوفر';
@@ -657,43 +647,53 @@
 
         function renderDOAJContent(doajData, query) {
             if (!doajData.success) {
-                return `<div class="doaj-info"><div class="doaj-badge not-found">⚠️ خطأ في الاتصال بـ DOAJ</div><p>لا يمكن التحقق من DOAJ حالياً. الخطأ: ${escapeHtml(doajData.error)}</p><p>يمكنك المحاولة مرة أخرى لاحقاً.</p></div>`;
+                return `<div class="doaj-info"><div class="doaj-badge not-found">⚠️ خطأ في الاتصال بـ DOAJ</div><p>لا يمكن التحقق من DOAJ حالياً. الخطأ: ${escapeHtml(doajData.error)}</p></div>`;
             }
             
             if (!doajData.data || doajData.data.total === 0 || !doajData.data.results || doajData.data.results.length === 0) {
-                return `<div class="doaj-info"><div class="doaj-badge not-found">❌ غير مفهرسة في DOAJ</div><p>المجلة "<strong>${escapeHtml(query)}</strong>" غير موجودة في دليل المجلات مفتوحة الوصول (DOAJ).</p><p>📌 ملاحظة: DOAJ يفهرس فقط المجلات مفتوحة الوصول بالكامل.</p></div>`;
+                return `<div class="doaj-info"><div class="doaj-badge not-found">❌ غير مفهرسة في DOAJ</div><p>المجلة "<strong>${escapeHtml(query)}</strong>" غير موجودة في دليل المجلات مفتوحة الوصول (DOAJ).</p></div>`;
             }
             
             const journal = doajData.data.results[0];
             const bibjson = journal.bibjson || {};
             
-            // استخراج الناشر بشكل صحيح
+            // ========== قراءة الناشر بشكل صحيح ==========
             let publisherName = 'غير محدد';
             if (bibjson.publisher) {
-                if (typeof bibjson.publisher === 'object') {
-                    publisherName = bibjson.publisher.name || 'غير محدد';
-                } else {
+                if (typeof bibjson.publisher === 'object' && bibjson.publisher.name) {
+                    publisherName = bibjson.publisher.name;
+                } else if (typeof bibjson.publisher === 'string') {
                     publisherName = bibjson.publisher;
+                } else {
+                    publisherName = JSON.stringify(bibjson.publisher);
                 }
             }
             
-            // استخراج رسوم APC
+            // ========== قراءة APC بشكل صحيح ==========
             let apcText = 'لا توجد معلومات';
             let apcPrice = null;
             let apcCurrency = null;
             if (bibjson.apc) {
+                // التحقق من وجود max_price
                 if (bibjson.apc.max_price) {
                     apcPrice = bibjson.apc.max_price;
                     apcCurrency = bibjson.apc.currency || '';
                     apcText = `💰 ${apcPrice} ${apcCurrency}`;
-                } else if (bibjson.apc.has_apc === true) {
+                }
+                // التحقق من وجود max array
+                else if (bibjson.apc.max && Array.isArray(bibjson.apc.max) && bibjson.apc.max.length > 0) {
+                    apcPrice = bibjson.apc.max[0].price;
+                    apcCurrency = bibjson.apc.max[0].currency || '';
+                    apcText = `💰 ${apcPrice} ${apcCurrency}`;
+                }
+                else if (bibjson.apc.has_apc === true) {
                     apcText = '⚠️ توجد رسوم نشر (غير محددة)';
                 } else if (bibjson.apc.has_apc === false) {
                     apcText = '✅ مجاني (بدون رسوم نشر)';
                 }
             }
             
-            // استخراج الترخيص
+            // ========== قراءة الترخيص ==========
             let licenseText = 'غير محدد';
             let licenseUrl = '';
             if (bibjson.license && bibjson.license.length > 0) {
@@ -713,7 +713,7 @@
             if (bibjson.copyright) {
                 if (bibjson.copyright.author_retains === true) copyrightText = '✅ المؤلف يحتفظ بحقوق النشر';
                 else if (bibjson.copyright.author_retains === false) copyrightText = '❌ حقوق النشر تعود للناشر';
-                else copyrightText = 'ℹ️ سياسة حقوق النشر متاحة عبر الرابط';
+                else if (bibjson.copyright.url) copyrightText = 'ℹ️ سياسة حقوق النشر متاحة عبر الرابط';
             }
             
             // الحفظ الرقمي
@@ -723,8 +723,6 @@
                     preservationText = bibjson.preservation.service.join(', ');
                 } else if (bibjson.preservation.services && bibjson.preservation.services.length > 0) {
                     preservationText = bibjson.preservation.services.join(', ');
-                } else if (bibjson.preservation.has_preservation === true) {
-                    preservationText = 'نعم (خدمات حفظ رقمية)';
                 }
             }
             
@@ -740,12 +738,11 @@
             // التصنيفات
             const subjects = bibjson.subject || [];
             
-            // روابط إضافية
+            // الروابط
             const journalUrl = bibjson.ref?.journal || '';
             const authorInstructions = bibjson.ref?.author_instructions || '';
-            
-            // رابط المجلة على DOAJ
             const doajUrl = `https://doaj.org/journal/${journal.id}`;
+            const apcUrl = bibjson.apc?.url || '';
             
             let html = `
                 <div class="doaj-info">
@@ -764,7 +761,7 @@
                     <div class="apc-card">
                         <strong>💰 رسوم النشر (Article Processing Charges - APC)</strong><br>
                         <span style="font-size:22px; font-weight:bold; color:#2c3e50;">${apcPrice} ${apcCurrency}</span>
-                        ${bibjson.apc?.url ? `<br><small><a href="${bibjson.apc.url}" target="_blank">📄 سياسة الرسوم</a></small>` : ''}
+                        ${apcUrl ? `<br><small><a href="${apcUrl}" target="_blank">📄 سياسة الرسوم</a></small>` : ''}
                     </div>
                 `;
             } else if (bibjson.apc?.has_apc === false) {
@@ -798,7 +795,6 @@
                     <div class="info-item"><strong>⚖️ سياسة حقوق النشر</strong><span>${escapeHtml(copyrightText)}</span></div>
                     <div class="info-item"><strong>💾 سياسة الحفظ الرقمي</strong><span>${escapeHtml(preservationText)}</span></div>
                     <div class="info-item"><strong>⏱️ فترة النشر (أسابيع)</strong><span>${bibjson.publication_time_weeks || 'غير محدد'}</span></div>
-                    <div class="info-item"><strong>🔍 مراجعة الأقران</strong><span>${bibjson.editorial?.review_process?.[0] || 'غير محدد'}</span></div>
                 </div>
             `;
             
@@ -827,8 +823,7 @@
             html += `<div class="info-item"><strong>DOAJ</strong><span><a href="${doajUrl}" target="_blank">عرض في DOAJ →</a></span></div>`;
             html += `</div>`;
             
-            // البيانات الخام (كخيار للمطورين)
-            html += `<details style="margin-top:15px;"><summary style="cursor:pointer;color:#667eea;padding:10px;background:#f0f0f0;border-radius:8px;">📄 البيانات الخام من DOAJ (للمطورين)</summary><div class="raw-data">${JSON.stringify(journal, null, 2)}</div></details>`;
+            html += `<details style="margin-top:15px;"><summary style="cursor:pointer;color:#667eea;padding:10px;background:#f0f0f0;border-radius:8px;">📄 البيانات الخام من DOAJ</summary><div class="raw-data">${JSON.stringify(journal, null, 2)}</div></details>`;
             html += `</div>`;
             
             return html;
