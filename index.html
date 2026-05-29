@@ -657,43 +657,43 @@
             const journal = doajData.data.results[0];
             const bibjson = journal.bibjson || {};
             
-            // ========== قراءة الناشر بشكل صحيح ==========
+            // ========== الناشر ==========
             let publisherName = 'غير محدد';
             if (bibjson.publisher) {
                 if (typeof bibjson.publisher === 'object' && bibjson.publisher.name) {
                     publisherName = bibjson.publisher.name;
                 } else if (typeof bibjson.publisher === 'string') {
                     publisherName = bibjson.publisher;
-                } else {
-                    publisherName = JSON.stringify(bibjson.publisher);
                 }
             }
             
-            // ========== قراءة APC بشكل صحيح ==========
+            // ========== APC - التصحيح النهائي ==========
             let apcText = 'لا توجد معلومات';
             let apcPrice = null;
             let apcCurrency = null;
+            
             if (bibjson.apc) {
-                // التحقق من وجود max_price
-                if (bibjson.apc.max_price) {
-                    apcPrice = bibjson.apc.max_price;
-                    apcCurrency = bibjson.apc.currency || '';
-                    apcText = `💰 ${apcPrice} ${apcCurrency}`;
-                }
-                // التحقق من وجود max array
-                else if (bibjson.apc.max && Array.isArray(bibjson.apc.max) && bibjson.apc.max.length > 0) {
+                // الحالة 1: وجود max array (كما في بيانات Sensors International)
+                if (bibjson.apc.max && Array.isArray(bibjson.apc.max) && bibjson.apc.max.length > 0) {
                     apcPrice = bibjson.apc.max[0].price;
                     apcCurrency = bibjson.apc.max[0].currency || '';
                     apcText = `💰 ${apcPrice} ${apcCurrency}`;
                 }
+                // الحالة 2: وجود max_price مباشر
+                else if (bibjson.apc.max_price) {
+                    apcPrice = bibjson.apc.max_price;
+                    apcCurrency = bibjson.apc.currency || '';
+                    apcText = `💰 ${apcPrice} ${apcCurrency}`;
+                }
+                // الحالة 3: وجود has_apc فقط
                 else if (bibjson.apc.has_apc === true) {
                     apcText = '⚠️ توجد رسوم نشر (غير محددة)';
                 } else if (bibjson.apc.has_apc === false) {
-                    apcText = '✅ مجاني (بدون رسوم نشر)';
+                    apcText = '✅ مجاني - لا توجد رسوم على النشر';
                 }
             }
             
-            // ========== قراءة الترخيص ==========
+            // ========== الترخيص ==========
             let licenseText = 'غير محدد';
             let licenseUrl = '';
             if (bibjson.license && bibjson.license.length > 0) {
@@ -713,7 +713,7 @@
             if (bibjson.copyright) {
                 if (bibjson.copyright.author_retains === true) copyrightText = '✅ المؤلف يحتفظ بحقوق النشر';
                 else if (bibjson.copyright.author_retains === false) copyrightText = '❌ حقوق النشر تعود للناشر';
-                else if (bibjson.copyright.url) copyrightText = 'ℹ️ سياسة حقوق النشر متاحة عبر الرابط';
+                else if (bibjson.copyright.url) copyrightText = 'ℹ️ سياسة الحقوق متاحة عبر الرابط';
             }
             
             // الحفظ الرقمي
@@ -755,19 +755,19 @@
                     </div>
             `;
             
-            // عرض APC بشكل مميز
+            // عرض APC - مع دعم المصفوفة
             if (apcPrice) {
                 html += `
                     <div class="apc-card">
                         <strong>💰 رسوم النشر (Article Processing Charges - APC)</strong><br>
-                        <span style="font-size:22px; font-weight:bold; color:#2c3e50;">${apcPrice} ${apcCurrency}</span>
+                        <span style="font-size:22px; font-weight:bold; color:#2c3e50;">💰 ${apcPrice} ${apcCurrency}</span>
                         ${apcUrl ? `<br><small><a href="${apcUrl}" target="_blank">📄 سياسة الرسوم</a></small>` : ''}
                     </div>
                 `;
             } else if (bibjson.apc?.has_apc === false) {
                 html += `
                     <div class="apc-card" style="background:#d4edda;">
-                        <strong>💰 رسوم النشر (Article Processing Charges - APC)</strong><br>
+                        <strong>💰 رسوم النشر (APC)</strong><br>
                         <span style="font-size:18px; font-weight:bold; color:#155724;">✅ مجاني - لا توجد رسوم على النشر</span>
                     </div>
                 `;
