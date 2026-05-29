@@ -20,10 +20,41 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
         }
+        .university-header {
+            background: linear-gradient(135deg, #1a472a 0%, #0e2a1a 100%);
+            color: #ffd700;
+            padding: 20px 30px;
+            text-align: center;
+            border-bottom: 3px solid #ffd700;
+        }
+        .university-name {
+            font-size: 26px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .college-name {
+            font-size: 20px;
+            color: #ffecb3;
+            margin-bottom: 5px;
+        }
+        .department-name {
+            font-size: 16px;
+            color: #e0e0e0;
+            margin-bottom: 8px;
+        }
+        .designer-name {
+            font-size: 14px;
+            color: #c8e6c9;
+            border-top: 1px solid #2e7d32;
+            padding-top: 8px;
+            margin-top: 5px;
+            display: inline-block;
+        }
         .header {
             background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
             color: white;
-            padding: 30px;
+            padding: 20px 30px;
             text-align: center;
         }
         .header h1 { font-size: 28px; margin-bottom: 10px; }
@@ -34,22 +65,6 @@
             padding: 25px;
             border-radius: 15px;
             margin-bottom: 30px;
-        }
-        .api-key-input {
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #fff3cd;
-            border-radius: 8px;
-            border: 1px solid #ffc107;
-        }
-        .api-key-input label { font-weight: bold; color: #856404; display: block; margin-bottom: 5px; }
-        .api-key-input input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ffc107;
-            border-radius: 5px;
-            font-family: monospace;
-            direction: ltr;
         }
         .input-group {
             display: flex;
@@ -267,21 +282,30 @@
             margin-top: 20px;
         }
         hr { margin: 20px 0; }
+        .note {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- الهيدر الجديد للجامعة والكلية -->
+        <div class="university-header">
+            <div class="university-name">🏛️ الجامعة التقنية الشمالية</div>
+            <div class="college-name">🎓 الكلية التقنية الهندسية - الموصل</div>
+            <div class="department-name">⚙️ تقنيات هندسة الصناعات الكيماوية والنفطية</div>
+            <div class="designer-name">✍️ تصميم: عزام عصام</div>
+        </div>
+        
         <div class="header">
             <h1>📊 Scopus - فتح المجلات العلمية</h1>
             <p>يعرض بيانات Scopus ويتحقق من وجود المجلة في القائمة السوداء لوزارة التعليم العالي العراقية وقائمة بيل (Beall's List)</p>
         </div>
         <div class="content">
             <div class="search-section">
-                <div class="api-key-input">
-                    <label>🔑 مفتاح Scopus API:</label>
-                    <input type="password" id="apiKeyInput" placeholder="أدخل مفتاح API الخاص بك" dir="ltr">
-                </div>
-                
                 <div class="input-group">
                     <input type="text" id="searchInput" placeholder="أدخل ISSN أو عنوان المجلة" dir="ltr">
                     <button onclick="searchJournal()">🔍 فحص المجلة</button>
@@ -297,6 +321,7 @@
                     ✅ المقارنة تتم بالتطابق التام للاسم (بدون أي مقارنات جزئية)
                 </div>
                 <div id="listsStatus" class="list-status">🔄 جاري تحميل القوائم...</div>
+                <div class="note">🔒 مفتاح Scopus API مدمج بشكل آمن - لا حاجة لإدخاله</div>
             </div>
             
             <div id="result" class="result"></div>
@@ -307,6 +332,9 @@
     </div>
 
     <script>
+        // ========== مفتاح API المدمج (مخفي عن المستخدم) ==========
+        const SCOPUS_API_KEY = "408e8184e13814cbed5718b6573553eb";
+        
         // ========== المتغيرات العامة ==========
         let beallList = [];
         let iraqBlacklist = [];
@@ -318,7 +346,6 @@
         // ========== دالة تطبيع بسيطة (تحويل إلى حروف صغيرة فقط) ==========
         function normalizeSimple(text) {
             if (!text) return '';
-            // فقط تحويل إلى حروف صغيرة وإزالة المسافات الزائدة
             return text.toLowerCase().trim();
         }
         
@@ -336,15 +363,6 @@
             
             console.log(`✅ تم تجهيز ${beallLowerCaseSet.size} مجلة في قائمة بيل (تطابق تام)`);
             console.log(`✅ تم تجهيز ${iraqLowerCaseSet.size} مجلة في القائمة العراقية (تطابق تام)`);
-            
-            // عرض أول 10 مجلات من كل قائمة للتشخيص
-            console.log('📋 أول 10 مجلات في قائمة بيل:');
-            let beallArray = Array.from(beallLowerCaseSet).slice(0, 10);
-            beallArray.forEach(j => console.log(`   - ${j}`));
-            
-            console.log('📋 أول 10 مجلات في القائمة العراقية:');
-            let iraqArray = Array.from(iraqLowerCaseSet).slice(0, 10);
-            iraqArray.forEach(j => console.log(`   - ${j}`));
         }
 
         // ========== دالة التحقق (تطابق تام فقط) ==========
@@ -361,32 +379,28 @@
             const normalizedQuery = normalizeSimple(searchQuery);
             
             console.log(`🔍 فحص: "${searchQuery}"`);
-            console.log(`   بعد التحويل إلى حروف صغيرة: "${normalizedQuery}"`);
+            console.log(`   بعد التحويل: "${normalizedQuery}"`);
             
-            // البحث في قائمة بيل (تطابق تام فقط)
             if (beallLowerCaseSet.has(normalizedQuery)) {
                 results.inBeall = true;
-                // البحث عن الاسم الأصلي
                 for (let journal of beallList) {
                     if (normalizeSimple(journal) === normalizedQuery) {
                         results.beallMatch = journal;
                         break;
                     }
                 }
-                console.log(`⚠️ موجود في قائمة بيل (تطابق تام): "${results.beallMatch}"`);
+                console.log(`⚠️ موجود في قائمة بيل: "${results.beallMatch}"`);
             }
             
-            // البحث في القائمة العراقية (تطابق تام فقط)
             if (iraqLowerCaseSet.has(normalizedQuery)) {
                 results.inIraqBlacklist = true;
-                // البحث عن الاسم الأصلي
                 for (let journal of iraqBlacklist) {
                     if (normalizeSimple(journal) === normalizedQuery) {
                         results.iraqMatch = journal;
                         break;
                     }
                 }
-                console.log(`⚠️ موجود في القائمة العراقية (تطابق تام): "${results.iraqMatch}"`);
+                console.log(`⚠️ موجود في القائمة العراقية: "${results.iraqMatch}"`);
             }
 
             if (!results.inBeall && !results.inIraqBlacklist) {
@@ -509,29 +523,11 @@
         loadBeallList();
         loadIraqBlacklist();
 
-        // ========== Scopus API ==========
-        const STORAGE_KEY = 'scopus_api_key';
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedKey = localStorage.getItem(STORAGE_KEY);
-            if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
-        });
-        
-        document.getElementById('apiKeyInput').addEventListener('change', function() {
-            if (this.value.trim()) localStorage.setItem(STORAGE_KEY, this.value.trim());
-            else localStorage.removeItem(STORAGE_KEY);
-        });
-        
+        // ========== Scopus API (باستخدام المفتاح المدمج) ==========
         async function searchJournal() {
             const query = document.getElementById('searchInput').value.trim();
-            const apiKey = document.getElementById('apiKeyInput').value.trim();
             const resultDiv = document.getElementById('result');
             
-            if (!apiKey) {
-                resultDiv.style.display = 'block';
-                resultDiv.innerHTML = '<div class="error-message">❌ الرجاء إدخال مفتاح Scopus API</div>';
-                return;
-            }
             if (!query) {
                 resultDiv.style.display = 'block';
                 resultDiv.innerHTML = '<div class="error-message">❌ الرجاء إدخال ISSN أو عنوان المجلة</div>';
@@ -548,9 +544,9 @@
                 if (isISSN) {
                     let issn = query;
                     if (!issn.includes('-') && issn.length === 8) issn = issn.slice(0,4) + '-' + issn.slice(4);
-                    url = `https://api.elsevier.com/content/serial/title/issn/${issn}?apiKey=${apiKey}`;
+                    url = `https://api.elsevier.com/content/serial/title/issn/${issn}?apiKey=${SCOPUS_API_KEY}`;
                 } else {
-                    url = `https://api.elsevier.com/content/serial/title?title=${encodeURIComponent(query)}&apiKey=${apiKey}`;
+                    url = `https://api.elsevier.com/content/serial/title?title=${encodeURIComponent(query)}&apiKey=${SCOPUS_API_KEY}`;
                 }
                 
                 const response = await fetch(url);
