@@ -306,11 +306,15 @@
             border-radius: 12px;
             margin-top: 10px;
         }
+        .loading-small {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- الهيدر الجديد للجامعة -->
         <div class="university-header">
             <div class="university-name">🏛️ الجامعة التقنية الشمالية</div>
             <div class="college-name">🎓 الكلية التقنية الهندسية - الموصل</div>
@@ -330,15 +334,13 @@
                 </div>
                 <div class="example">
                     📝 أمثلة: 
-                    <span onclick="setExample('New England Journal of Medicine')">✅ NEJM (مجلة آمنة)</span> •
-                    <span onclick="setExample('Oncotarget')">⚠️ Oncotarget (قائمة بيل)</span> •
-                    <span onclick="setExample('Korean Journal of Physiology and Pharmacology')">⚠️ Korean Journal (العراق)</span>
-                </div>
-                <div class="example" style="margin-top: 10px; color:#28a745;">
-                    ✅ المقارنة تتم بالتطابق التام للاسم
+                    <span onclick="setExample('New England Journal of Medicine')">✅ NEJM</span> •
+                    <span onclick="setExample('Oncotarget')">⚠️ Oncotarget</span> •
+                    <span onclick="setExample('Korean Journal of Physiology and Pharmacology')">⚠️ Korean Journal</span> •
+                    <span onclick="setExample('PLOS ONE')">📚 PLOS ONE</span>
                 </div>
                 <div id="listsStatus" class="list-status">🔄 جاري تحميل القوائم...</div>
-                <div class="note">🔒 مفتاح Scopus API مدمج بشكل آمن | 📚 DOAJ API عام (بدون مفتاح)</div>
+                <div class="note">🔒 مفتاح Scopus API مدمج | 🌍 DOAJ API (بحث عام)</div>
             </div>
             
             <div id="result" class="result"></div>
@@ -488,24 +490,32 @@
 
         async function searchDOAJ(query) {
             try {
-                // البحث بـ ISSN أو العنوان
+                // الرابط الصحيح لـ DOAJ API v4
                 let url;
                 const isISSN = query.match(/^\d{4}-\d{3}[\dX]$/i) || query.match(/^\d{8,9}$/);
                 if (isISSN) {
-                    let issn = query.replace('-', '');
-                    if (issn.length === 8) issn = issn.slice(0,4) + '-' + issn.slice(4);
-                    url = `https://doaj.org/api/search/journals/issn:${issn}`;
+                    let issn = query;
+                    // تنسيق ISSN بشكل صحيح (XXXX-XXXX)
+                    if (!issn.includes('-') && issn.length === 8) issn = issn.slice(0,4) + '-' + issn.slice(4);
+                    url = `https://doaj.org/api/v4/search/journals/issn:${issn}`;
                 } else {
-                    url = `https://doaj.org/api/search/journals/title:"${encodeURIComponent(query)}"`;
+                    // ترميز العنوان للـ URL
+                    const encodedTitle = encodeURIComponent(`"${query}"`);
+                    url = `https://doaj.org/api/v4/search/journals/title:${encodedTitle}`;
                 }
                 
+                console.log('DOAJ URL:', url);
+                
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 ثواني مهلة
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
                 const response = await fetch(url, { signal: controller.signal });
                 clearTimeout(timeoutId);
                 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 const data = await response.json();
+                console.log('DOAJ Response:', data);
                 return { success: true, data: data };
             } catch (error) {
                 console.warn('DOAJ error:', error);
@@ -520,7 +530,7 @@
             // التحقق من وجود بيانات Scopus
             const hasScopusData = currentScopusData?.success && currentScopusData.data?.['serial-metadata-response']?.['entry'];
             
-            if (!hasScopusData && !currentDOAJData?.success) {
+            if (!hasScopusData && (!currentDOAJData?.success || currentDOAJData.data?.total === 0)) {
                 html += `<div class="not-found-box"><span style="font-size:48px;">📭</span><h3>لم يتم العثور على المجلة</h3><p>المجلة غير مفهرسة في Scopus أو DOAJ</p></div>`;
                 container.innerHTML = html;
                 return;
@@ -547,7 +557,6 @@
                         ${currentDOAJData?.success && currentDOAJData.data?.total > 0 ? `<span class="badge">DOAJ</span>` : ''}
                     </div>
                     
-                    <!-- التبويبات -->
                     <div class="tabs">
                         <button class="tab-btn active" onclick="switchTab('scopus')">📊 Scopus</button>
                         <button class="tab-btn" onclick="switchTab('doaj')">🌍 DOAJ</button>
@@ -558,7 +567,7 @@
                     </div>
                     
                     <div id="tab-doaj" class="tab-content">
-                        ${currentDOAJData?.success ? renderDOAJContent(currentDOAJData.data, currentQuery) : '<div class="not-found-box" style="margin:0"><p>❌ تعذر الاتصال بـ DOAJ أو المجلة غير مفهرسة</p></div>'}
+                        ${renderDOAJContent(currentDOAJData, currentQuery)}
                     </div>
                 </div>
             `;
@@ -636,7 +645,7 @@
             }
             
             if (subjects.length > 0) {
-                html += `<div class="section"><div class="section-title">🏷️ التصنيفات الموضوعية</div><div>${subjects.map(sub => `<span class="subject-tag">${escapeHtml(sub.name)} ${sub.code ? `(${sub.code})` : ''}</span>`).join('')}</div></div>`;
+                html += `<div class="section"><div class="section-title">🏷️ التصنيفات الموضوعية (Scopus)</div><div>${subjects.map(sub => `<span class="subject-tag">${escapeHtml(sub.name)} ${sub.code ? `(${sub.code})` : ''}</span>`).join('')}</div></div>`;
             }
             
             if (links.length > 0) {
@@ -649,65 +658,105 @@
         }
 
         function renderDOAJContent(doajData, query) {
-            if (!doajData.results || doajData.results.length === 0) {
-                return `<div class="doaj-info"><div class="doaj-badge not-found">❌ غير مفهرسة في DOAJ</div><p>المجلة "<strong>${escapeHtml(query)}</strong>" غير موجودة في دليل المجلات مفتوحة الوصول.</p></div>`;
+            // فشل الاتصال بـ DOAJ
+            if (!doajData.success) {
+                return `<div class="doaj-info"><div class="doaj-badge not-found">⚠️ خطأ في الاتصال بـ DOAJ</div><p>لا يمكن التحقق من DOAJ حالياً. الخطأ: ${escapeHtml(doajData.error)}</p><p>يمكنك المحاولة مرة أخرى لاحقاً.</p></div>`;
             }
             
-            const journal = doajData.results[0];
+            // لا توجد نتائج
+            if (!doajData.data || doajData.data.total === 0 || !doajData.data.results || doajData.data.results.length === 0) {
+                return `<div class="doaj-info"><div class="doaj-badge not-found">❌ غير مفهرسة في DOAJ</div><p>المجلة "<strong>${escapeHtml(query)}</strong>" غير موجودة في دليل المجلات مفتوحة الوصول (DOAJ).</p><p>📌 ملاحظة: DOAJ يفهرس فقط المجلات مفتوحة الوصول بالكامل.</p></div>`;
+            }
+            
+            const journal = doajData.data.results[0];
             const bibjson = journal.bibjson || {};
             
             // استخراج البيانات
-            const isInDOAJ = true;
             const apc = bibjson.apc;
-            const hasApv = apc ? (apc.max_price ? `💰 ${apc.max_price} ${apc.currency || ''}` : 'غير محدد') : 'لا توجد رسوم (مجاني)';
+            let apcText = 'لا توجد معلومات';
+            if (apc) {
+                if (apc.max_price) {
+                    apcText = `💰 ${apc.max_price} ${apc.currency || ''}`;
+                } else if (apc.has_apc === false) {
+                    apcText = '✅ مجاني (بدون رسوم نشر)';
+                } else {
+                    apcText = 'غير محدد';
+                }
+            } else {
+                apcText = 'لا توجد رسوم نشر (Open Access بدون APC)';
+            }
+            
+            // استخراج الترخيص
             const license = bibjson.license;
             let licenseText = 'غير محدد';
             if (license && license.length > 0) {
                 const lic = license[0];
                 if (lic.type) licenseText = lic.type;
+                else if (lic.BY && lic.NC && lic.ND) licenseText = 'CC BY-NC-ND';
                 else if (lic.BY && lic.NC) licenseText = 'CC BY-NC';
+                else if (lic.BY && lic.ND) licenseText = 'CC BY-ND';
+                else if (lic.BY && lic.SA) licenseText = 'CC BY-SA';
                 else if (lic.BY) licenseText = 'CC BY';
                 else if (lic.url) licenseText = lic.url.split('/').pop();
             }
             
+            // سياسة حقوق النشر
             const copyright = bibjson.copyright;
-            const copyrightText = copyright ? (copyright.author_retains ? '✅ يحتفظ المؤلف بحقوقه' : '❌ لا يحتفظ المؤلف بحقوقه') : 'غير محدد';
-            
-            const preservation = bibjson.preservation;
-            let preservationText = 'غير محدد';
-            if (preservation && preservation.services) {
-                preservationText = preservation.services.join(', ');
-            } else if (preservation && preservation.service) {
-                preservationText = Array.isArray(preservation.service) ? preservation.service.join(', ') : preservation.service;
+            let copyrightText = 'غير محدد';
+            if (copyright) {
+                if (copyright.author_retains === true) copyrightText = '✅ المؤلف يحتفظ بحقوق النشر';
+                else if (copyright.author_retains === false) copyrightText = '❌ حقوق النشر تعود للناشر';
+                else copyrightText = copyright.url ? 'رابط سياسة الحقوق متوفر' : 'غير محدد';
             }
             
-            const languages = bibjson.language;
-            const languageText = languages ? (Array.isArray(languages) ? languages.join(', ') : languages) : 'غير محدد';
+            // سياسة الحفظ الرقمي
+            const preservation = bibjson.preservation;
+            let preservationText = 'غير محدد';
+            if (preservation) {
+                if (preservation.services && preservation.services.length > 0) {
+                    preservationText = preservation.services.join(', ');
+                } else if (preservation.service) {
+                    preservationText = Array.isArray(preservation.service) ? preservation.service.join(', ') : preservation.service;
+                } else if (preservation.has_preservation) {
+                    preservationText = 'نعم (خدمات حفظ رقمية)';
+                }
+            }
             
-            const publisher = bibjson.publisher || 'غير محدد';
-            const country = bibjson.country || 'غير محدد';
+            // اللغات
+            const languages = bibjson.language;
+            let languageText = 'غير محدد';
+            if (languages) {
+                languageText = Array.isArray(languages) ? languages.join(', ') : languages;
+            }
+            
+            // الكلمات المفتاحية
+            const keywords = bibjson.keywords || [];
+            
+            // التصنيفات
             const subjects = bibjson.subject || [];
             
-            const doajUrl = `https://doaj.org/toc/${bibjson.identifier?.find(i => i.type === 'pissn')?.id || ''}`;
+            // رابط المجلة
+            const journalId = journal.id;
+            const doajUrl = `https://doaj.org/journal/${journalId}`;
             
             let html = `
                 <div class="doaj-info">
-                    <div class="doaj-badge">✅ مفهرسة في DOAJ (Open Access)</div>
+                    <div class="doaj-badge">✅ مفهرسة في DOAJ (دليل الوصول المفتوح)</div>
                     
                     <div class="info-grid">
-                        <div class="info-item"><strong>الناشر</strong><span>${escapeHtml(publisher)}</span></div>
-                        <div class="info-item"><strong>الدولة</strong><span>${escapeHtml(country)}</span></div>
+                        <div class="info-item"><strong>الناشر</strong><span>${escapeHtml(bibjson.publisher || 'غير محدد')}</span></div>
+                        <div class="info-item"><strong>الدولة</strong><span>${escapeHtml(bibjson.country || 'غير محدد')}</span></div>
                         <div class="info-item"><strong>لغة النشر</strong><span>${escapeHtml(languageText)}</span></div>
                     </div>
                     
                     <div class="apc-card">
-                        <strong>💰 رسوم النشر (APC)</strong><br>
-                        <span style="font-size:18px; font-weight:bold;">${escapeHtml(hasApv)}</span>
+                        <strong>💰 رسوم النشر (Article Processing Charges - APC)</strong><br>
+                        <span style="font-size:20px; font-weight:bold; color:#2c3e50;">${escapeHtml(apcText)}</span>
                     </div>
                     
                     <div class="info-grid" style="margin-top:15px;">
                         <div class="info-item"><strong>📜 نوع الترخيص</strong><span>${escapeHtml(licenseText)}</span></div>
-                        <div class="info-item"><strong>⚖️ سياسة حقوق النشر</strong><span>${copyrightText}</span></div>
+                        <div class="info-item"><strong>⚖️ سياسة حقوق النشر</strong><span>${escapeHtml(copyrightText)}</span></div>
                         <div class="info-item"><strong>💾 سياسة الحفظ الرقمي</strong><span>${escapeHtml(preservationText)}</span></div>
                     </div>
             `;
@@ -715,32 +764,48 @@
             if (subjects.length > 0) {
                 html += `<div class="section-title" style="margin-top:15px;">🏷️ التصنيفات الموضوعية (DOAJ)</div><div>`;
                 for (let sub of subjects) {
-                    html += `<span class="subject-tag">${escapeHtml(sub.term || sub)}</span>`;
+                    const term = sub.term || sub;
+                    const code = sub.code ? ` (${sub.code})` : '';
+                    html += `<span class="subject-tag">${escapeHtml(term)}${escapeHtml(code)}</span>`;
                 }
                 html += `</div>`;
             }
             
-            html += `<div style="margin-top:15px;"><a href="${doajUrl}" target="_blank" style="color:#667eea;">🔗 عرض المجلة على DOAJ →</a></div>`;
-            html += `<details><summary style="cursor:pointer;color:#667eea;margin-top:15px;padding:10px;background:#f0f0f0;border-radius:8px;">📄 البيانات الخام من DOAJ</summary><div class="raw-data">${JSON.stringify(journal, null, 2)}</div></details>`;
+            if (keywords.length > 0) {
+                html += `<div class="section-title" style="margin-top:15px;">🔑 الكلمات المفتاحية</div><div>`;
+                for (let kw of keywords) {
+                    html += `<span class="subject-tag">${escapeHtml(kw)}</span>`;
+                }
+                html += `</div>`;
+            }
+            
+            html += `<div style="margin-top:20px;"><a href="${doajUrl}" target="_blank" style="color:#667eea; text-decoration:none; background:#f0f0f0; padding:8px 16px; border-radius:25px;">🔗 عرض المجلة على DOAJ →</a></div>`;
+            html += `<details style="margin-top:15px;"><summary style="cursor:pointer;color:#667eea;padding:10px;background:#f0f0f0;border-radius:8px;">📄 البيانات الخام من DOAJ</summary><div class="raw-data">${JSON.stringify(journal, null, 2)}</div></details>`;
             html += `</div>`;
             
             return html;
         }
 
         function switchTab(tabName) {
-            // تحديث أزرار التبويبات
             const tabs = document.querySelectorAll('.tab-btn');
             tabs.forEach(btn => btn.classList.remove('active'));
             if (tabName === 'scopus') {
-                document.querySelector('.tab-btn:first-child').classList.add('active');
+                if (tabs[0]) tabs[0].classList.add('active');
             } else {
-                document.querySelector('.tab-btn:last-child').classList.add('active');
+                if (tabs[1]) tabs[1].classList.add('active');
             }
             
-            // تحديث المحتوى
-            document.getElementById('tab-scopus').classList.remove('active');
-            document.getElementById('tab-doaj').classList.remove('active');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
+            const tabScopus = document.getElementById('tab-scopus');
+            const tabDoaj = document.getElementById('tab-doaj');
+            if (tabScopus && tabDoaj) {
+                tabScopus.classList.remove('active');
+                tabDoaj.classList.remove('active');
+                if (tabName === 'scopus') {
+                    tabScopus.classList.add('active');
+                } else {
+                    tabDoaj.classList.add('active');
+                }
+            }
         }
 
         function escapeHtml(str) {
@@ -750,6 +815,8 @@
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
                 return m;
+            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+                return c;
             });
         }
         
