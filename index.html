@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مستكشف موثوقية المجلات العلمية</title>
+    <title>Scopus + DOAJ - فتح المجلات مع التحقق من القوائم السوداء</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -27,30 +27,10 @@
             text-align: center;
             border-bottom: 3px solid #ffd700;
         }
-        .university-name {
-            font-size: 26px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-        }
-        .college-name {
-            font-size: 20px;
-            color: #ffecb3;
-            margin-bottom: 5px;
-        }
-        .department-name {
-            font-size: 16px;
-            color: #e0e0e0;
-            margin-bottom: 8px;
-        }
-        .designer-name {
-            font-size: 14px;
-            color: #c8e6c9;
-            border-top: 1px solid #2e7d32;
-            padding-top: 8px;
-            margin-top: 5px;
-            display: inline-block;
-        }
+        .university-name { font-size: 26px; font-weight: bold; margin-bottom: 8px; }
+        .college-name { font-size: 20px; color: #ffecb3; margin-bottom: 5px; }
+        .department-name { font-size: 16px; color: #e0e0e0; margin-bottom: 8px; }
+        .designer-name { font-size: 14px; color: #c8e6c9; border-top: 1px solid #2e7d32; padding-top: 8px; display: inline-block; }
         .header {
             background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
             color: white;
@@ -107,9 +87,7 @@
             margin: 0 5px;
             cursor: pointer;
         }
-        .result {
-            display: none;
-        }
+        .result { display: none; }
         .loading { text-align: center; padding: 40px; }
         .spinner {
             border: 3px solid #f3f3f3;
@@ -195,11 +173,7 @@
             margin-bottom: 5px;
             text-transform: uppercase;
         }
-        .info-item span {
-            font-size: 14px;
-            color: #333;
-            word-break: break-word;
-        }
+        .info-item span { font-size: 14px; color: #333; word-break: break-word; }
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -211,21 +185,9 @@
             border-radius: 12px;
             text-align: center;
         }
-        .metric-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #667eea;
-        }
-        .metric-label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .metric-year {
-            font-size: 11px;
-            color: #999;
-            margin-top: 3px;
-        }
+        .metric-value { font-size: 28px; font-weight: bold; color: #667eea; }
+        .metric-label { font-size: 12px; color: #666; margin-top: 5px; }
+        .metric-year { font-size: 11px; color: #999; margin-top: 3px; }
         .subject-tag {
             display: inline-block;
             background: #e9ecef;
@@ -282,27 +244,83 @@
             margin-top: 20px;
         }
         hr { margin: 20px 0; }
-        .note {
-            font-size: 12px;
-            color: #888;
+        .note { font-size: 12px; color: #888; margin-top: 10px; text-align: center; }
+        
+        /* التبويبات (Tabs) */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0;
+        }
+        .tab-btn {
+            background: #f0f0f0;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 30px 30px 0 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .tab-btn:hover:not(.active) {
+            background: #e0e0e0;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .doaj-info {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .doaj-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .doaj-badge.not-found {
+            background: #dc3545;
+        }
+        .apc-card {
+            background: linear-gradient(135deg, #ffd70015 0%, #ff8c0015 100%);
+            padding: 15px;
+            border-radius: 12px;
             margin-top: 10px;
-            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- الهيدر الجديد للجامعة والكلية -->
+        <!-- الهيدر الجديد للجامعة -->
         <div class="university-header">
-            <div class="university-name"> الجامعة التقنية الشمالية</div>
-            <div class="college-name"> الكلية التقنية الهندسية - الموصل</div>
-            <div class="department-name"> تقنيات هندسة الصناعات الكيماوية والنفطية</div>
-            <div class="designer-name"> تصميم: عزام عصام</div>
+            <div class="university-name">🏛️ الجامعة التقنية الشمالية</div>
+            <div class="college-name">🎓 الكلية التقنية الهندسية - الموصل</div>
+            <div class="department-name">⚙️ تقنيات هندسة الصناعات الكيماوية والنفطية</div>
+            <div class="designer-name">✍️ تصميم: عزام عصام</div>
         </div>
         
         <div class="header">
-            <h1> مستكشف موثوقية المجلات العلمية</h1>
-            <p>يعرض بيانات Scopus ويتحقق من وجود المجلة في القائمة السوداء لوزارة التعليم العالي العراقية وقائمة بيل (Beall's List)</p>
+            <h1>📊 Scopus + DOAJ - فتح المجلات العلمية</h1>
+            <p>يعرض بيانات Scopus و DOAJ ويتحقق من وجود المجلة في القائمة السوداء</p>
         </div>
         <div class="content">
             <div class="search-section">
@@ -314,157 +332,78 @@
                     📝 أمثلة: 
                     <span onclick="setExample('New England Journal of Medicine')">✅ NEJM (مجلة آمنة)</span> •
                     <span onclick="setExample('Oncotarget')">⚠️ Oncotarget (قائمة بيل)</span> •
-                    <span onclick="setExample('Acta de Gerencia Ciencia (CAGENA)')">⚠️ Acta de Gerencia Ciencia</span> •
-                    <span onclick="setExample('Bulletin of National Institute of Health Sciences')">⚠️ Bulletin NIH (العراق)</span>
+                    <span onclick="setExample('Korean Journal of Physiology and Pharmacology')">⚠️ Korean Journal (العراق)</span>
                 </div>
                 <div class="example" style="margin-top: 10px; color:#28a745;">
-                    ✅ المقارنة تتم بالتطابق التام للاسم (بدون أي مقارنات جزئية)
+                    ✅ المقارنة تتم بالتطابق التام للاسم
                 </div>
                 <div id="listsStatus" class="list-status">🔄 جاري تحميل القوائم...</div>
-                <div class="note">🔒 مفتاح Scopus API مدمج بشكل آمن - لا حاجة لإدخاله</div>
+                <div class="note">🔒 مفتاح Scopus API مدمج بشكل آمن | 📚 DOAJ API عام (بدون مفتاح)</div>
             </div>
             
             <div id="result" class="result"></div>
         </div>
         <div class="footer">
-            <p>جميع البيانات مقدمة من Scopus API © Elsevier | يتم التحقق من القوائم السوداء المحلية</p>
+            <p>جميع البيانات مقدمة من Scopus API © Elsevier و DOAJ | يتم التحقق من القوائم السوداء المحلية</p>
         </div>
     </div>
 
     <script>
-        // ========== مفتاح API المدمج (مخفي عن المستخدم) ==========
-        const SCOPUS_API_KEY = "408e8184e13814cbed5718b6573553eb";
+        // ========== مفتاح API المدمج ==========
+        const SCOPUS_API_KEY = "408e8184e1573553eb";
         
         // ========== المتغيرات العامة ==========
         let beallList = [];
         let iraqBlacklist = [];
-        
-        // ========== Set للتخزين (للبحث السريع) ==========
         let beallLowerCaseSet = new Set();
         let iraqLowerCaseSet = new Set();
         
-        // ========== دالة تطبيع بسيطة (تحويل إلى حروف صغيرة فقط) ==========
+        // ========== دوال القوائم السوداء ==========
         function normalizeSimple(text) {
             if (!text) return '';
             return text.toLowerCase().trim();
         }
         
-        // ========== تحضير القوائم ==========
         function prepareLists() {
             beallLowerCaseSet.clear();
-            for (let journal of beallList) {
-                beallLowerCaseSet.add(normalizeSimple(journal));
-            }
-            
+            for (let journal of beallList) beallLowerCaseSet.add(normalizeSimple(journal));
             iraqLowerCaseSet.clear();
-            for (let journal of iraqBlacklist) {
-                iraqLowerCaseSet.add(normalizeSimple(journal));
-            }
-            
-            console.log(`✅ تم تجهيز ${beallLowerCaseSet.size} مجلة في قائمة بيل (تطابق تام)`);
-            console.log(`✅ تم تجهيز ${iraqLowerCaseSet.size} مجلة في القائمة العراقية (تطابق تام)`);
+            for (let journal of iraqBlacklist) iraqLowerCaseSet.add(normalizeSimple(journal));
+            console.log(`✅ بيل: ${beallLowerCaseSet.size} | العراق: ${iraqLowerCaseSet.size}`);
         }
 
-        // ========== دالة التحقق (تطابق تام فقط) ==========
         function checkBlacklistsExact(searchQuery) {
-            let results = {
-                inBeall: false,
-                inIraqBlacklist: false,
-                beallMatch: null,
-                iraqMatch: null
-            };
-
+            let results = { inBeall: false, inIraqBlacklist: false, beallMatch: null, iraqMatch: null };
             if (!searchQuery) return results;
-
             const normalizedQuery = normalizeSimple(searchQuery);
-            
-            console.log(`🔍 فحص: "${searchQuery}"`);
-            console.log(`   بعد التحويل: "${normalizedQuery}"`);
-            
             if (beallLowerCaseSet.has(normalizedQuery)) {
                 results.inBeall = true;
                 for (let journal of beallList) {
-                    if (normalizeSimple(journal) === normalizedQuery) {
-                        results.beallMatch = journal;
-                        break;
-                    }
+                    if (normalizeSimple(journal) === normalizedQuery) { results.beallMatch = journal; break; }
                 }
-                console.log(`⚠️ موجود في قائمة بيل: "${results.beallMatch}"`);
             }
-            
             if (iraqLowerCaseSet.has(normalizedQuery)) {
                 results.inIraqBlacklist = true;
                 for (let journal of iraqBlacklist) {
-                    if (normalizeSimple(journal) === normalizedQuery) {
-                        results.iraqMatch = journal;
-                        break;
-                    }
+                    if (normalizeSimple(journal) === normalizedQuery) { results.iraqMatch = journal; break; }
                 }
-                console.log(`⚠️ موجود في القائمة العراقية: "${results.iraqMatch}"`);
             }
-
-            if (!results.inBeall && !results.inIraqBlacklist) {
-                console.log(`✅ غير موجود في القوائم السوداء`);
-            }
-
             return results;
         }
 
-        // ========== عرض نتائج التحقق ==========
         function getBlacklistResultsHTML(searchQuery) {
             if (!searchQuery) return '';
-            
             const results = checkBlacklistsExact(searchQuery);
             let html = '';
-
             if (results.inIraqBlacklist) {
-                html += `
-                    <div class="danger-message" style="border-right: 4px solid #dc3545;">
-                        <div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;">
-                            <span style="font-size: 40px;">🚨</span>
-                            <div style="flex: 1;">
-                                <strong style="font-size: 18px; color: #721c24;">تحذير خطير!</strong><br>
-                                المجلة "<strong>${escapeHtml(searchQuery)}</strong>" موجودة في <strong>القائمة السوداء لوزارة التعليم العالي والبحث العلمي العراقية</strong><br>
-                                <hr style="margin: 10px 0;">
-                                <small>📋 التطابق مع: "${escapeHtml(results.iraqMatch)}"</small><br>
-                                <strong style="color: #721c24; display: inline-block; margin-top: 10px;">❌ لا يعتد بها للأغراض الترقية والتقييم.</strong>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                html += `<div class="danger-message"><div style="display: flex; align-items: flex-start; gap: 15px;"><span style="font-size: 40px;">🚨</span><div><strong style="font-size: 18px;">تحذير خطير!</strong><br>المجلة "<strong>${escapeHtml(searchQuery)}</strong>" موجودة في <strong>القائمة السوداء لوزارة التعليم العالي العراقية</strong><br><small>📋 التطابق مع: "${escapeHtml(results.iraqMatch)}"</small><br><strong>❌ لا يعتد بها للأغراض الترقية والتعيين.</strong></div></div></div>`;
             }
-
             if (results.inBeall) {
-                html += `
-                    <div class="danger-message" style="border-right: 4px solid #ffc107; background: #fff3cd;">
-                        <div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;">
-                            <span style="font-size: 40px;">⚠️</span>
-                            <div style="flex: 1;">
-                                <strong style="font-size: 18px; color: #856404;">تحذير! مجلة مفترسة (Predatory Journal)</strong><br>
-                                المجلة "<strong>${escapeHtml(searchQuery)}</strong>" موجودة في <strong>قائمة بيل (Beall's List)</strong> للمجلات المفترسة<br>
-                                <hr style="margin: 10px 0;">
-                                <small>📋 التطابق مع: "${escapeHtml(results.beallMatch)}"</small><br>
-                                <strong style="color: #856404; display: inline-block; margin-top: 10px;">❌ لا ينصح بالنشر في هذه المجلة أو الاعتماد عليها في البحوث الأكاديمية.</strong>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                html += `<div class="danger-message" style="border-right-color:#ffc107;background:#fff3cd;"><div style="display: flex; align-items: flex-start; gap: 15px;"><span style="font-size: 40px;">⚠️</span><div><strong style="font-size: 18px; color:#856404;">تحذير! مجلة مفترسة</strong><br>المجلة موجودة في <strong>قائمة بيل</strong><br><small>📋 التطابق مع: "${escapeHtml(results.beallMatch)}"</small><br><strong>❌ لا ينصح بالنشر.</strong></div></div></div>`;
             }
-
             if (!results.inBeall && !results.inIraqBlacklist && searchQuery) {
-                html += `
-                    <div class="safe-message">
-                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                            <span style="font-size: 30px;">✅</span>
-                            <div>
-                                <strong>المجلة آمنة</strong><br>
-                                لم يتم العثور على "<strong>${escapeHtml(searchQuery)}</strong>" في القوائم السوداء.
-                            </div>
-                        </div>
-                    </div>
-                `;
+                html += `<div class="safe-message"><div style="display: flex; align-items: center; gap: 15px;"><span style="font-size: 30px;">✅</span><div><strong>المجلة آمنة</strong><br>لم يتم العثور على "<strong>${escapeHtml(searchQuery)}</strong>" في القوائم السوداء.</div></div></div>`;
             }
-
             return html;
         }
 
@@ -472,61 +411,39 @@
         async function loadBeallList() {
             try {
                 const response = await fetch('beall_list.json?t=' + Date.now());
-                if (response.ok) {
-                    beallList = await response.json();
-                    console.log(`✅ تم تحميل ${beallList.length} مجلة من قائمة بيل`);
-                    prepareLists();
-                    updateListsStatus();
-                } else {
-                    console.warn('❌ فشل تحميل beall_list.json');
-                    document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل قائمة بيل';
-                }
-            } catch (e) {
-                console.error('❌ خطأ:', e);
-                document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل قائمة بيل';
-            }
+                if (response.ok) { beallList = await response.json(); prepareLists(); updateListsStatus(); }
+                else { console.warn('فشل beall_list.json'); document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل قائمة بيل'; }
+            } catch(e) { console.error(e); document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل قائمة بيل'; }
         }
 
         async function loadIraqBlacklist() {
             try {
                 const response = await fetch('blacklist.json?t=' + Date.now());
-                if (response.ok) {
-                    iraqBlacklist = await response.json();
-                    console.log(`✅ تم تحميل ${iraqBlacklist.length} مجلة من القائمة السوداء العراقية`);
-                    prepareLists();
-                    updateListsStatus();
-                } else {
-                    console.warn('❌ فشل تحميل blacklist.json');
-                    document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل القائمة العراقية';
-                }
-            } catch (e) {
-                console.error('❌ خطأ:', e);
-                document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل القائمة العراقية';
-            }
+                if (response.ok) { iraqBlacklist = await response.json(); prepareLists(); updateListsStatus(); }
+                else { console.warn('فشل blacklist.json'); document.getElementById('listsStatus').innerHTML = '⚠️ فشل تحميل القائمة العراقية'; }
+            } catch(e) { console.error(e); document.getElementById('listsStatus').innerHTML = '⚠️ خطأ في تحميل القائمة العراقية'; }
         }
 
         function updateListsStatus() {
             const statusDiv = document.getElementById('listsStatus');
-            
             if (beallList.length > 0 && iraqBlacklist.length > 0) {
-                statusDiv.innerHTML = `✅ تم التحميل | 📋 بيل: ${beallList.length} | 🇮🇶 العراق: ${iraqBlacklist.length} | (تطابق تام)`;
-                statusDiv.style.background = '#d4edda';
-                statusDiv.style.color = '#155724';
-            } else if (beallList.length > 0 || iraqBlacklist.length > 0) {
-                statusDiv.innerHTML = `⚠️ تحميل جزئي | بيل: ${beallList.length} | العراق: ${iraqBlacklist.length}`;
-                statusDiv.style.background = '#fff3cd';
-                statusDiv.style.color = '#856404';
+                statusDiv.innerHTML = `✅ تم التحميل | 📋 بيل: ${beallList.length} | 🇮🇶 العراق: ${iraqBlacklist.length}`;
+                statusDiv.style.background = '#d4edda'; statusDiv.style.color = '#155724';
             }
         }
 
-        // بدء تحميل القوائم
         loadBeallList();
         loadIraqBlacklist();
 
-        // ========== Scopus API (باستخدام المفتاح المدمج) ==========
+        // ========== البحث الرئيسي ==========
+        let currentScopusData = null;
+        let currentDOAJData = null;
+        let currentQuery = '';
+
         async function searchJournal() {
             const query = document.getElementById('searchInput').value.trim();
             const resultDiv = document.getElementById('result');
+            currentQuery = query;
             
             if (!query) {
                 resultDiv.style.display = 'block';
@@ -535,12 +452,23 @@
             }
             
             resultDiv.style.display = 'block';
-            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>جاري البحث في Scopus والتحقق من القوائم السوداء...</p></div>';
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>جاري البحث في Scopus و DOAJ...</p></div>';
             
+            // البحث المتوازي
+            const scopusPromise = searchScopus(query);
+            const doajPromise = searchDOAJ(query);
+            
+            const [scopusResult, doajResult] = await Promise.all([scopusPromise, doajPromise]);
+            currentScopusData = scopusResult;
+            currentDOAJData = doajResult;
+            
+            displayResults();
+        }
+
+        async function searchScopus(query) {
             try {
                 let url;
                 const isISSN = query.match(/^\d{4}-\d{3}[\dX]$/i) || query.match(/^\d{8,9}$/);
-                
                 if (isISSN) {
                     let issn = query;
                     if (!issn.includes('-') && issn.length === 8) issn = issn.slice(0,4) + '-' + issn.slice(4);
@@ -548,207 +476,273 @@
                 } else {
                     url = `https://api.elsevier.com/content/serial/title?title=${encodeURIComponent(query)}&apiKey=${SCOPUS_API_KEY}`;
                 }
-                
                 const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                displayAllInfo(resultDiv, data, query);
+                return { success: true, data: data };
             } catch (error) {
-                console.warn('Scopus error:', error.message);
-                displayOnlyBlacklistCheck(resultDiv, query);
+                console.warn('Scopus error:', error);
+                return { success: false, error: error.message };
             }
         }
-        
-        function displayOnlyBlacklistCheck(container, query) {
-            let html = '';
-            html += getBlacklistResultsHTML(query);
+
+        async function searchDOAJ(query) {
+            try {
+                // البحث بـ ISSN أو العنوان
+                let url;
+                const isISSN = query.match(/^\d{4}-\d{3}[\dX]$/i) || query.match(/^\d{8,9}$/);
+                if (isISSN) {
+                    let issn = query.replace('-', '');
+                    if (issn.length === 8) issn = issn.slice(0,4) + '-' + issn.slice(4);
+                    url = `https://doaj.org/api/search/journals/issn:${issn}`;
+                } else {
+                    url = `https://doaj.org/api/search/journals/title:"${encodeURIComponent(query)}"`;
+                }
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 ثواني مهلة
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return { success: true, data: data };
+            } catch (error) {
+                console.warn('DOAJ error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        function displayResults() {
+            const container = document.getElementById('result');
+            let html = getBlacklistResultsHTML(currentQuery);
             
+            // التحقق من وجود بيانات Scopus
+            const hasScopusData = currentScopusData?.success && currentScopusData.data?.['serial-metadata-response']?.['entry'];
+            
+            if (!hasScopusData && !currentDOAJData?.success) {
+                html += `<div class="not-found-box"><span style="font-size:48px;">📭</span><h3>لم يتم العثور على المجلة</h3><p>المجلة غير مفهرسة في Scopus أو DOAJ</p></div>`;
+                container.innerHTML = html;
+                return;
+            }
+            
+            // استخراج بيانات المجلة
+            let journalTitle = currentQuery;
+            let scopusEntry = null;
+            if (hasScopusData) {
+                const serials = currentScopusData.data['serial-metadata-response']['entry'];
+                const journals = Array.isArray(serials) ? serials : [serials];
+                if (journals.length > 0) {
+                    scopusEntry = journals[0];
+                    journalTitle = scopusEntry['dc:title'] || journalTitle;
+                }
+            }
+            
+            // عنوان المجلة
             html += `
-                <div class="not-found-box">
-                    <span style="font-size: 48px;">📭</span>
-                    <h3 style="margin: 15px 0; color: #666;">لم يتم العثور على المجلة في Scopus</h3>
-                    <p style="color: #888;">المجلة "<strong>${escapeHtml(query)}</strong>" غير مفهرسة في قاعدة بيانات Scopus.</p>
+                <div class="journal-card">
+                    <div class="journal-title">
+                        📚 ${escapeHtml(journalTitle)}
+                        ${scopusEntry ? `<span class="badge">Scopus</span>` : ''}
+                        ${currentDOAJData?.success && currentDOAJData.data?.total > 0 ? `<span class="badge">DOAJ</span>` : ''}
+                    </div>
+                    
+                    <!-- التبويبات -->
+                    <div class="tabs">
+                        <button class="tab-btn active" onclick="switchTab('scopus')">📊 Scopus</button>
+                        <button class="tab-btn" onclick="switchTab('doaj')">🌍 DOAJ</button>
+                    </div>
+                    
+                    <div id="tab-scopus" class="tab-content active">
+                        ${scopusEntry ? renderScopusContent(scopusEntry) : '<div class="not-found-box" style="margin:0"><p>❌ غير مفهرسة في Scopus</p></div>'}
+                    </div>
+                    
+                    <div id="tab-doaj" class="tab-content">
+                        ${currentDOAJData?.success ? renderDOAJContent(currentDOAJData.data, currentQuery) : '<div class="not-found-box" style="margin:0"><p>❌ تعذر الاتصال بـ DOAJ أو المجلة غير مفهرسة</p></div>'}
+                    </div>
                 </div>
             `;
             
             container.innerHTML = html;
         }
-        
-        function displayAllInfo(container, data, query) {
-            const serials = data?.['serial-metadata-response']?.['entry'];
+
+        function renderScopusContent(j) {
+            const title = j['dc:title'] || 'غير معروف';
+            const publisher = j['dc:publisher'] || 'غير معروف';
+            const issn = j['prism:issn'] || 'غير متوفر';
+            const eIssn = j['prism:eIssn'] || 'غير متوفر';
+            const sourceType = j['prism:aggregationType'] || 'غير محدد';
+            const sourceId = j['source-id'] || 'غير متوفر';
+            const openaccess = j['openaccess'] === '1' ? 'نعم' : (j['openaccess'] === '0' ? 'لا' : 'غير محدد');
+            const coverageStart = j['coverageStartYear'] || j['coverage-start-year']?.['$'] || 'غير متوفر';
+            const coverageEnd = j['coverageEndYear'] || j['coverage-end-year']?.['$'] || 'غير متوفر';
+            const citeScoreCurrent = j['citeScoreYearInfoList']?.['citeScoreCurrentMetric'] || j['citeScoreCurrentMetric'] || null;
+            const citeScoreYear = j['citeScoreYearInfoList']?.['citeScoreCurrentMetricYear'] || null;
             
-            let html = getBlacklistResultsHTML(query);
-            
-            if (!serials || serials.length === 0) {
-                html += `
-                    <div class="not-found-box">
-                        <span style="font-size: 48px;">📭</span>
-                        <h3 style="margin: 15px 0; color: #666;">لم يتم العثور على المجلة في Scopus</h3>
-                        <p style="color: #888;">المجلة "<strong>${escapeHtml(query)}</strong>" غير مفهرسة في قاعدة بيانات Scopus.</p>
-                    </div>
-                `;
-                container.innerHTML = html;
-                return;
+            let sjrList = [];
+            if (j['SJRList']?.['SJR']) {
+                const sjrItems = Array.isArray(j['SJRList']['SJR']) ? j['SJRList']['SJR'] : [j['SJRList']['SJR']];
+                sjrList = sjrItems.map(item => ({ year: item['@year'], value: item['$'] }));
             }
             
-            const journals = Array.isArray(serials) ? serials : [serials];
+            let snipList = [];
+            if (j['SNIPList']?.['SNIP']) {
+                const snipItems = Array.isArray(j['SNIPList']['SNIP']) ? j['SNIPList']['SNIP'] : [j['SNIPList']['SNIP']];
+                snipList = snipItems.map(item => ({ year: item['@year'], value: item['$'] }));
+            }
             
-            for (let i = 0; i < journals.length; i++) {
-                const j = journals[i];
-                const title = j['dc:title'] || 'غير معروف';
-                const publisher = j['dc:publisher'] || 'غير معروف';
-                const issn = j['prism:issn'] || 'غير متوفر';
-                const eIssn = j['prism:eIssn'] || 'غير متوفر';
-                const sourceType = j['prism:aggregationType'] || 'غير محدد';
-                const sourceId = j['source-id'] || 'غير متوفر';
-                const openaccess = j['openaccess'] === '1' ? 'نعم' : (j['openaccess'] === '0' ? 'لا' : 'غير محدد');
-                const coverageStart = j['coverageStartYear'] || j['coverage-start-year']?.['$'] || 'غير متوفر';
-                const coverageEnd = j['coverageEndYear'] || j['coverage-end-year']?.['$'] || 'غير متوفر';
-                
-                const citeScoreCurrent = j['citeScoreYearInfoList']?.['citeScoreCurrentMetric'] || j['citeScoreCurrentMetric'] || null;
-                const citeScoreYear = j['citeScoreYearInfoList']?.['citeScoreCurrentMetricYear'] || null;
-                
-                let sjrList = [];
-                if (j['SJRList']?.['SJR']) {
-                    const sjrItems = Array.isArray(j['SJRList']['SJR']) ? j['SJRList']['SJR'] : [j['SJRList']['SJR']];
-                    sjrList = sjrItems.map(item => ({ year: item['@year'], value: item['$'] }));
+            let subjects = [];
+            if (j['subject-area']) {
+                const areas = Array.isArray(j['subject-area']) ? j['subject-area'] : [j['subject-area']];
+                subjects = areas.map(area => ({ name: area['$'] || 'غير محدد', code: area['@code'] || '' }));
+            }
+            
+            let links = [];
+            if (j['link']) {
+                const linkItems = Array.isArray(j['link']) ? j['link'] : [j['link']];
+                links = linkItems.map(link => ({ ref: link['@ref'], href: link['@href'] }));
+            }
+            
+            let html = `
+                <div class="section">
+                    <div class="section-title">📋 المعلومات الأساسية</div>
+                    <div class="info-grid">
+                        <div class="info-item"><strong>ISSN</strong><span dir="ltr">${issn}</span></div>
+                        <div class="info-item"><strong>eISSN</strong><span dir="ltr">${eIssn}</span></div>
+                        <div class="info-item"><strong>الناشر</strong><span>${escapeHtml(publisher)}</span></div>
+                        <div class="info-item"><strong>Source ID</strong><span>${sourceId}</span></div>
+                        <div class="info-item"><strong>الوصول المفتوح</strong><span>${openaccess}</span></div>
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="section-title">📅 سنوات التغطية في Scopus</div>
+                    <div class="info-grid">
+                        <div class="info-item"><strong>سنة البدء</strong><span>${coverageStart}</span></div>
+                        <div class="info-item"><strong>سنة النهاية</strong><span>${coverageEnd}</span></div>
+                    </div>
+                </div>
+            `;
+            
+            if (citeScoreCurrent) {
+                html += `<div class="section"><div class="section-title">📊 CiteScore</div><div class="metrics-grid"><div class="metric-card"><div class="metric-value">${citeScoreCurrent}</div><div class="metric-label">CiteScore</div><div class="metric-year">السنة: ${citeScoreYear || '2024'}</div></div></div></div>`;
+            }
+            
+            if (sjrList.length > 0) {
+                html += `<div class="section"><div class="section-title">⭐ SJR</div><div class="metrics-grid">${sjrList.map(sjr => `<div class="metric-card"><div class="metric-value">${sjr.value}</div><div class="metric-label">SJR</div><div class="metric-year">السنة: ${sjr.year}</div></div>`).join('')}</div></div>`;
+            }
+            
+            if (snipList.length > 0) {
+                html += `<div class="section"><div class="section-title">📈 SNIP</div><div class="metrics-grid">${snipList.map(snip => `<div class="metric-card"><div class="metric-value">${snip.value}</div><div class="metric-label">SNIP</div><div class="metric-year">السنة: ${snip.year}</div></div>`).join('')}</div></div>`;
+            }
+            
+            if (subjects.length > 0) {
+                html += `<div class="section"><div class="section-title">🏷️ التصنيفات الموضوعية</div><div>${subjects.map(sub => `<span class="subject-tag">${escapeHtml(sub.name)} ${sub.code ? `(${sub.code})` : ''}</span>`).join('')}</div></div>`;
+            }
+            
+            if (links.length > 0) {
+                html += `<div class="section"><div class="section-title">🔗 الروابط</div><ul>${links.map(link => `<li><a href="${link.href}" target="_blank">${link.ref}</a></li>`).join('')}</ul></div>`;
+            }
+            
+            html += `<details><summary style="cursor:pointer;color:#667eea;margin-top:15px;padding:10px;background:#f0f0f0;border-radius:8px;">📄 البيانات الخام من Scopus</summary><div class="raw-data">${JSON.stringify(j, null, 2)}</div></details>`;
+            
+            return html;
+        }
+
+        function renderDOAJContent(doajData, query) {
+            if (!doajData.results || doajData.results.length === 0) {
+                return `<div class="doaj-info"><div class="doaj-badge not-found">❌ غير مفهرسة في DOAJ</div><p>المجلة "<strong>${escapeHtml(query)}</strong>" غير موجودة في دليل المجلات مفتوحة الوصول.</p></div>`;
+            }
+            
+            const journal = doajData.results[0];
+            const bibjson = journal.bibjson || {};
+            
+            // استخراج البيانات
+            const isInDOAJ = true;
+            const apc = bibjson.apc;
+            const hasApv = apc ? (apc.max_price ? `💰 ${apc.max_price} ${apc.currency || ''}` : 'غير محدد') : 'لا توجد رسوم (مجاني)';
+            const license = bibjson.license;
+            let licenseText = 'غير محدد';
+            if (license && license.length > 0) {
+                const lic = license[0];
+                if (lic.type) licenseText = lic.type;
+                else if (lic.BY && lic.NC) licenseText = 'CC BY-NC';
+                else if (lic.BY) licenseText = 'CC BY';
+                else if (lic.url) licenseText = lic.url.split('/').pop();
+            }
+            
+            const copyright = bibjson.copyright;
+            const copyrightText = copyright ? (copyright.author_retains ? '✅ يحتفظ المؤلف بحقوقه' : '❌ لا يحتفظ المؤلف بحقوقه') : 'غير محدد';
+            
+            const preservation = bibjson.preservation;
+            let preservationText = 'غير محدد';
+            if (preservation && preservation.services) {
+                preservationText = preservation.services.join(', ');
+            } else if (preservation && preservation.service) {
+                preservationText = Array.isArray(preservation.service) ? preservation.service.join(', ') : preservation.service;
+            }
+            
+            const languages = bibjson.language;
+            const languageText = languages ? (Array.isArray(languages) ? languages.join(', ') : languages) : 'غير محدد';
+            
+            const publisher = bibjson.publisher || 'غير محدد';
+            const country = bibjson.country || 'غير محدد';
+            const subjects = bibjson.subject || [];
+            
+            const doajUrl = `https://doaj.org/toc/${bibjson.identifier?.find(i => i.type === 'pissn')?.id || ''}`;
+            
+            let html = `
+                <div class="doaj-info">
+                    <div class="doaj-badge">✅ مفهرسة في DOAJ (Open Access)</div>
+                    
+                    <div class="info-grid">
+                        <div class="info-item"><strong>الناشر</strong><span>${escapeHtml(publisher)}</span></div>
+                        <div class="info-item"><strong>الدولة</strong><span>${escapeHtml(country)}</span></div>
+                        <div class="info-item"><strong>لغة النشر</strong><span>${escapeHtml(languageText)}</span></div>
+                    </div>
+                    
+                    <div class="apc-card">
+                        <strong>💰 رسوم النشر (APC)</strong><br>
+                        <span style="font-size:18px; font-weight:bold;">${escapeHtml(hasApv)}</span>
+                    </div>
+                    
+                    <div class="info-grid" style="margin-top:15px;">
+                        <div class="info-item"><strong>📜 نوع الترخيص</strong><span>${escapeHtml(licenseText)}</span></div>
+                        <div class="info-item"><strong>⚖️ سياسة حقوق النشر</strong><span>${copyrightText}</span></div>
+                        <div class="info-item"><strong>💾 سياسة الحفظ الرقمي</strong><span>${escapeHtml(preservationText)}</span></div>
+                    </div>
+            `;
+            
+            if (subjects.length > 0) {
+                html += `<div class="section-title" style="margin-top:15px;">🏷️ التصنيفات الموضوعية (DOAJ)</div><div>`;
+                for (let sub of subjects) {
+                    html += `<span class="subject-tag">${escapeHtml(sub.term || sub)}</span>`;
                 }
-                
-                let snipList = [];
-                if (j['SNIPList']?.['SNIP']) {
-                    const snipItems = Array.isArray(j['SNIPList']['SNIP']) ? j['SNIPList']['SNIP'] : [j['SNIPList']['SNIP']];
-                    snipList = snipItems.map(item => ({ year: item['@year'], value: item['$'] }));
-                }
-                
-                let subjects = [];
-                if (j['subject-area']) {
-                    const areas = Array.isArray(j['subject-area']) ? j['subject-area'] : [j['subject-area']];
-                    subjects = areas.map(area => ({ name: area['$'] || 'غير محدد', code: area['@code'] || '' }));
-                }
-                
-                let links = [];
-                if (j['link']) {
-                    const linkItems = Array.isArray(j['link']) ? j['link'] : [j['link']];
-                    links = linkItems.map(link => ({ ref: link['@ref'], href: link['@href'] }));
-                }
-                
-                html += `
-                    <div class="journal-card">
-                        <div class="journal-title">
-                            📚 ${escapeHtml(title)}
-                            <span class="badge">${sourceType}</span>
-                        </div>
-                        
-                        <div class="section">
-                            <div class="section-title">📋 المعلومات الأساسية</div>
-                            <div class="info-grid">
-                                <div class="info-item"><strong>ISSN</strong><span dir="ltr">${issn}</span></div>
-                                <div class="info-item"><strong>eISSN</strong><span dir="ltr">${eIssn}</span></div>
-                                <div class="info-item"><strong>الناشر</strong><span>${escapeHtml(publisher)}</span></div>
-                                <div class="info-item"><strong>Source ID</strong><span>${sourceId}</span></div>
-                                <div class="info-item"><strong>الوصول المفتوح</strong><span>${openaccess}</span></div>
-                            </div>
-                        </div>
-                        
-                        <div class="section">
-                            <div class="section-title">📅 سنوات التغطية في Scopus</div>
-                            <div class="info-grid">
-                                <div class="info-item"><strong>سنة البدء</strong><span>${coverageStart}</span></div>
-                                <div class="info-item"><strong>سنة النهاية</strong><span>${coverageEnd}</span></div>
-                            </div>
-                        </div>
-                `;
-                
-                if (citeScoreCurrent) {
-                    html += `
-                        <div class="section">
-                            <div class="section-title">📊 CiteScore</div>
-                            <div class="metrics-grid">
-                                <div class="metric-card">
-                                    <div class="metric-value">${citeScoreCurrent}</div>
-                                    <div class="metric-label">CiteScore</div>
-                                    <div class="metric-year">السنة: ${citeScoreYear || '2024'}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (sjrList.length > 0) {
-                    html += `
-                        <div class="section">
-                            <div class="section-title">⭐ SJR</div>
-                            <div class="metrics-grid">
-                                ${sjrList.map(sjr => `
-                                    <div class="metric-card">
-                                        <div class="metric-value">${sjr.value}</div>
-                                        <div class="metric-label">SJR</div>
-                                        <div class="metric-year">السنة: ${sjr.year || '2024'}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (snipList.length > 0) {
-                    html += `
-                        <div class="section">
-                            <div class="section-title">📈 SNIP</div>
-                            <div class="metrics-grid">
-                                ${snipList.map(snip => `
-                                    <div class="metric-card">
-                                        <div class="metric-value">${snip.value}</div>
-                                        <div class="metric-label">SNIP</div>
-                                        <div class="metric-year">السنة: ${snip.year || '2024'}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (subjects.length > 0) {
-                    html += `
-                        <div class="section">
-                            <div class="section-title">🏷️ التصنيفات الموضوعية</div>
-                            <div>
-                                ${subjects.map(sub => `<span class="subject-tag">${escapeHtml(sub.name)} ${sub.code ? `(${sub.code})` : ''}</span>`).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (links.length > 0) {
-                    html += `
-                        <div class="section">
-                            <div class="section-title">🔗 الروابط</div>
-                            <ul>
-                                ${links.map(link => `<li><a href="${link.href}" target="_blank">${link.ref}</a></li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                }
-                
-                html += `
-                    <details>
-                        <summary style="cursor: pointer; color: #667eea; margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px;">
-                            📄 البيانات الخام من Scopus
-                        </summary>
-                        <div class="raw-data">${JSON.stringify(j, null, 2)}</div>
-                    </details>
-                `;
-                
                 html += `</div>`;
             }
             
-            container.innerHTML = html;
+            html += `<div style="margin-top:15px;"><a href="${doajUrl}" target="_blank" style="color:#667eea;">🔗 عرض المجلة على DOAJ →</a></div>`;
+            html += `<details><summary style="cursor:pointer;color:#667eea;margin-top:15px;padding:10px;background:#f0f0f0;border-radius:8px;">📄 البيانات الخام من DOAJ</summary><div class="raw-data">${JSON.stringify(journal, null, 2)}</div></details>`;
+            html += `</div>`;
+            
+            return html;
         }
-        
+
+        function switchTab(tabName) {
+            // تحديث أزرار التبويبات
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(btn => btn.classList.remove('active'));
+            if (tabName === 'scopus') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+            }
+            
+            // تحديث المحتوى
+            document.getElementById('tab-scopus').classList.remove('active');
+            document.getElementById('tab-doaj').classList.remove('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
         function escapeHtml(str) {
             if (!str) return '';
             return String(str).replace(/[&<>]/g, function(m) {
@@ -767,6 +761,8 @@
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') searchJournal();
         });
+        
+        window.switchTab = switchTab;
     </script>
 </body>
 </html>
