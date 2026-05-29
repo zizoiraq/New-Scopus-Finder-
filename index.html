@@ -324,14 +324,14 @@
 <body>
     <div class="container">
         <div class="university-header">
-            <div class="university-name">🏛️ الجامعة التقنية الشمالية</div>
-            <div class="college-name">🎓 الكلية التقنية الهندسية - الموصل</div>
-            <div class="department-name">⚙️ تقنيات هندسة الصناعات الكيماوية والنفطية</div>
-            <div class="designer-name">✍️ تصميم: عزام عصام</div>
+            <div class="university-name"> الجامعة التقنية الشمالية</div>
+            <div class="college-name"> الكلية التقنية الهندسية - الموصل</div>
+            <div class="department-name"> تقنيات هندسة الصناعات الكيماوية والنفطية</div>
+            <div class="designer-name">تصميم: عزام عصام</div>
         </div>
         
         <div class="header">
-            <h1>📊 Scopus + DOAJ - فتح المجلات العلمية</h1>
+            <h1>📊 Scopus + DOAJ - مستكشف موثوقية المجلات العلمية</h1>
             <p>يعرض بيانات Scopus و DOAJ ويتحقق من وجود المجلة في القائمة السوداء</p>
         </div>
         <div class="content">
@@ -349,7 +349,6 @@
                     <span onclick="setExample('PLOS ONE')">📚 PLOS ONE</span>
                 </div>
                 <div id="listsStatus" class="list-status">🔄 جاري تحميل القوائم...</div>
-                <div class="note">🔒 مفتاح Scopus API مدمج | 🌍 DOAJ API (بحث عام)</div>
             </div>
             
             <div id="result" class="result"></div>
@@ -403,7 +402,7 @@
             const results = checkBlacklistsExact(searchQuery);
             let html = '';
             if (results.inIraqBlacklist) {
-                html += `<div class="danger-message"><div style="display: flex; align-items: flex-start; gap: 15px;"><span style="font-size: 40px;">🚨</span><div><strong style="font-size: 18px;">تحذير خطير!</strong><br>المجلة "<strong>${escapeHtml(searchQuery)}</strong>" موجودة في <strong>القائمة السوداء لوزارة التعليم العالي العراقية</strong><br><small>📋 التطابق مع: "${escapeHtml(results.iraqMatch)}"</small><br><strong>❌ لا يعتد بها للأغراض الترقية والتعيين.</strong></div></div></div>`;
+                html += `<div class="danger-message"><div style="display: flex; align-items: flex-start; gap: 15px;"><span style="font-size: 40px;">🚨</span><div><strong style="font-size: 18px;">تحذير خطير!</strong><br>المجلة "<strong>${escapeHtml(searchQuery)}</strong>" موجودة في <strong>القائمة السوداء لوزارة التعليم العالي العراقية</strong><br><small>📋 التطابق مع: "${escapeHtml(results.iraqMatch)}"</small><br><strong>❌ لا يعتد بها للأغراض الترقية والتقييم.</strong></div></div></div>`;
             }
             if (results.inBeall) {
                 html += `<div class="danger-message" style="border-right-color:#ffc107;background:#fff3cd;"><div style="display: flex; align-items: flex-start; gap: 15px;"><span style="font-size: 40px;">⚠️</span><div><strong style="font-size: 18px; color:#856404;">تحذير! مجلة مفترسة</strong><br>المجلة موجودة في <strong>قائمة بيل</strong><br><small>📋 التطابق مع: "${escapeHtml(results.beallMatch)}"</small><br><strong>❌ لا ينصح بالنشر.</strong></div></div></div>`;
